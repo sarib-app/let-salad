@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { saveUserPreferences } from '../../utils/storage';
 
 const Preferences = ({ navigation, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -117,11 +118,13 @@ const Preferences = ({ navigation, onComplete }) => {
     setPreferences({ ...preferences, [field]: value });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     } else {
       console.log('Preferences completed:', preferences);
+      // Save preferences to AsyncStorage
+      await saveUserPreferences(preferences);
       // Call onComplete if provided (for HomeScreen)
       if (onComplete) {
         onComplete();

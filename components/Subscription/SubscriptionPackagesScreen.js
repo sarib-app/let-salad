@@ -34,8 +34,8 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
 
   const handlePackageSelect = (pkg) => {
     console.log('Selected package:', pkg);
-    // Navigate to checkout or payment
-    // navigation.navigate('Checkout', { package: pkg, duration: selectedDuration });
+    // Navigate to delivery preferences first
+    navigation.navigate('DeliveryPreferences', { package: pkg, duration: selectedDuration });
   };
 
   const getMealsSummary = (meals) => {

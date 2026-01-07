@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { saveUserProfile } from '../../utils/storage';
 
 const CompleteProfile = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -39,9 +40,11 @@ const CompleteProfile = ({ navigation }) => {
     );
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (isFormValid()) {
       console.log('Profile data:', formData);
+      // Save profile to AsyncStorage
+      await saveUserProfile(formData);
       // Navigate to parent navigator's MainApp screen
       navigation.getParent().navigate('MainApp');
     }

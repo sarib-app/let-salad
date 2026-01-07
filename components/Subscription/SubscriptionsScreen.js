@@ -1,18 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { getActiveSubscriptions } from '../../utils/storage';
 
 const SubscriptionsScreen = ({ navigation }) => {
-  // TODO: Replace with actual subscription state from context/API
-  const [hasSubscriptions, setHasSubscriptions] = useState(false);
   const [activeSubscriptions, setActiveSubscriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load subscriptions when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSubscriptions();
+    }, [])
+  );
+
+  const loadSubscriptions = async () => {
+    setLoading(true);
+    const subs = await getActiveSubscriptions();
+    setActiveSubscriptions(subs || []);
+    setLoading(false);
+  };
 
   const handleChooseSubscription = () => {
     // Navigate to Home tab
@@ -24,8 +40,31 @@ const SubscriptionsScreen = ({ navigation }) => {
     navigation.navigate('SubscriptionPackages');
   };
 
+  const handleManageSubscription = (subscription) => {
+    navigation.navigate('ManageSubscription', {
+      subscriptionId: subscription.id,
+    });
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Subscriptions</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={[styles.emptySubtitle, { marginTop: Spacing.md }]}>
+            Loading your subscriptions...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   // Empty state - no subscriptions
-  if (!hasSubscriptions || activeSubscriptions.length === 0) {
+  if (activeSubscriptions.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -90,7 +129,10 @@ const SubscriptionsScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.manageButton}>
+            <TouchableOpacity
+              style={styles.manageButton}
+              onPress={() => handleManageSubscription(subscription)}
+            >
               <Text style={styles.manageButtonText}>Manage Subscription</Text>
             </TouchableOpacity>
           </View>
