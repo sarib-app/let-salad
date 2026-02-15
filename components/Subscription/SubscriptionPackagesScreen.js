@@ -6,40 +6,89 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { fetchSubscriptionPackages } from '../../data/mockSubscriptionData';
+import { getSubscriptionTypes, getSubscriptionPackages } from '../../utils/api';
 
 const SubscriptionPackagesScreen = ({ navigation }) => {
+  const [subscriptionTypes, setSubscriptionTypes] = useState([]);
+  const [selectedType, setSelectedType] = useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDuration, setSelectedDuration] = useState(24);
+  const [packagesLoading, setPackagesLoading] = useState(false);
 
   useEffect(() => {
-    loadPackages();
+    loadSubscriptionTypes();
   }, []);
 
-  const loadPackages = async () => {
+  const loadSubscriptionTypes = async () => {
     try {
       setLoading(true);
-      const data = await fetchSubscriptionPackages();
-      setPackages(data);
+      const response = await getSubscriptionTypes();
+
+      if (response.code === 200 && response.subscription_types) {
+        setSubscriptionTypes(response.subscription_types);
+
+        // Select the first type by default (24-day)
+        if (response.subscription_types.length > 0) {
+          const defaultType = response.subscription_types[0];
+          setSelectedType(defaultType);
+          await loadPackagesForType(defaultType.id);
+        }
+      }
     } catch (error) {
-      console.error('Error loading packages:', error);
+      console.error('Error loading subscription types:', error);
+      Alert.alert('Error', 'Failed to load subscription plans. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePackageSelect = (pkg) => {
-    console.log('Selected package:', pkg);
-    // Navigate to delivery preferences first
-    navigation.navigate('DeliveryPreferences', { package: pkg, duration: selectedDuration });
+  const loadPackagesForType = async (typeId) => {
+    try {
+      setPackagesLoading(true);
+      const response = await getSubscriptionPackages(typeId);
+
+      if (response.code === 200 && response.packages) {
+        setPackages(response.packages);
+      }
+    } catch (error) {
+      console.error('Error loading packages:', error);
+    } finally {
+      setPackagesLoading(false);
+    }
   };
 
-  const getMealsSummary = (meals) => {
-    return meals.map((m) => `${m.qty} ${m.meal_name}`).join(', ');
+  const handleDurationChange = async (type) => {
+    if (type.id === selectedType?.id) return;
+    setSelectedType(type);
+    await loadPackagesForType(type.id);
+  };
+
+  const handlePackageSelect = (pkg) => {
+    // Pass package and subscription type info to next screen
+    navigation.navigate('DeliveryPreferences', {
+      package: pkg,
+      subscriptionType: selectedType,
+      duration: selectedType?.duration_days,
+    });
+  };
+
+  // Format contents object into readable summary
+  const getContentsSummary = (contents) => {
+    if (!contents) return '';
+
+    return Object.entries(contents)
+      .map(([key, qty]) => {
+        // Format key: "chicken_meals" → "Chicken Meals", "salads" → "Salads"
+        const label = key
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        return `${qty} ${label}`;
+      })
+      .join(', ');
   };
 
   if (loading) {
@@ -58,103 +107,111 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Select a subscription package that fits your lifestyle</Text>
 
         {/* Duration Toggle */}
-        <View style={styles.durationContainer}>
-          <TouchableOpacity
-            style={[
-              styles.durationButton,
-              selectedDuration === 24 && styles.durationButtonActive,
-            ]}
-            onPress={() => setSelectedDuration(24)}
-          >
-            <Text
-              style={[
-                styles.durationText,
-                selectedDuration === 24 && styles.durationTextActive,
-              ]}
-            >
-              24 Days
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.durationButton,
-              selectedDuration === 10 && styles.durationButtonActive,
-            ]}
-            onPress={() => setSelectedDuration(10)}
-          >
-            <Text
-              style={[
-                styles.durationText,
-                selectedDuration === 10 && styles.durationTextActive,
-              ]}
-            >
-              10 Days
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {subscriptionTypes.length > 1 && (
+          <View style={styles.durationContainer}>
+            {subscriptionTypes.map((type) => (
+              <TouchableOpacity
+                key={type.id}
+                style={[
+                  styles.durationButton,
+                  selectedType?.id === type.id && styles.durationButtonActive,
+                ]}
+                onPress={() => handleDurationChange(type)}
+              >
+                <Text
+                  style={[
+                    styles.durationText,
+                    selectedType?.id === type.id && styles.durationTextActive,
+                  ]}
+                >
+                  {type.duration_days} Days
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {packages.map((pkg) => {
-          const price = selectedDuration === 24 ? pkg.price_24 : pkg.price_10;
+      {packagesLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading packages...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {packages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No packages available for this plan</Text>
+            </View>
+          ) : (
+            packages.map((pkg, index) => {
+              const isFirst = index === 0;
 
-          return (
-            <TouchableOpacity
-              key={pkg.id}
-              style={[styles.packageCard, pkg.popular && styles.packageCardPopular]}
-              onPress={() => handlePackageSelect(pkg)}
-            >
-              {pkg.popular && (
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularText}>⭐ Most Popular</Text>
-                </View>
-              )}
-
-              <View style={styles.packageHeader}>
-                <Text style={styles.packageTitle}>{pkg.package_title}</Text>
-                <View style={styles.priceContainer}>
-                  <Text style={styles.price}>{price}</Text>
-                  <Text style={styles.currency}> SAR</Text>
-                </View>
-              </View>
-
-              {pkg.description && (
-                <Text style={styles.description}>{pkg.description}</Text>
-              )}
-
-              <View style={styles.mealsContainer}>
-                <Text style={styles.mealsLabel}>Includes:</Text>
-                <Text style={styles.mealsText}>{getMealsSummary(pkg.meals)}</Text>
-              </View>
-
-              <View style={styles.durationBadge}>
-                <Text style={styles.durationBadgeText}>{selectedDuration} Days</Text>
-              </View>
-
-              <View style={styles.selectButton}>
-                <LinearGradient
-                  colors={pkg.popular ? ['#00B14F', '#00D95F'] : ['#F5F5F5', '#F5F5F5']}
-                  style={styles.selectButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+              return (
+                <TouchableOpacity
+                  key={pkg.id}
+                  style={[styles.packageCard, isFirst && styles.packageCardPopular]}
+                  onPress={() => handlePackageSelect(pkg)}
                 >
-                  <Text
-                    style={[
-                      styles.selectButtonText,
-                      !pkg.popular && styles.selectButtonTextSecondary,
-                    ]}
-                  >
-                    Select Plan
-                  </Text>
-                </LinearGradient>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                  {isFirst && (
+                    <View style={styles.popularBadge}>
+                      <Text style={styles.popularText}>⭐ Recommended</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.packageHeader}>
+                    <Text style={styles.packageTitle}>{pkg.name}</Text>
+                    <View style={styles.priceContainer}>
+                      <Text style={styles.price}>{pkg.price}</Text>
+                      <Text style={styles.currency}> SAR</Text>
+                    </View>
+                  </View>
+
+                  {pkg.description && (
+                    <Text style={styles.description} numberOfLines={2}>
+                      {pkg.description}
+                    </Text>
+                  )}
+
+                  {pkg.contents && Object.keys(pkg.contents).length > 0 && (
+                    <View style={styles.mealsContainer}>
+                      <Text style={styles.mealsLabel}>Includes:</Text>
+                      <Text style={styles.mealsText}>{getContentsSummary(pkg.contents)}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.durationBadge}>
+                    <Text style={styles.durationBadgeText}>
+                      {selectedType?.duration_days} Days
+                    </Text>
+                  </View>
+
+                  <View style={styles.selectButton}>
+                    <LinearGradient
+                      colors={isFirst ? ['#00B14F', '#00D95F'] : ['#F5F5F5', '#F5F5F5']}
+                      style={styles.selectButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Text
+                        style={[
+                          styles.selectButtonText,
+                          !isFirst && styles.selectButtonTextSecondary,
+                        ]}
+                      >
+                        Select Plan
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -220,6 +277,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl,
+  },
+  emptyState: {
+    padding: Spacing.xxl,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    ...Fonts.medium,
+    fontSize: 15,
+    color: Colors.textSecondary,
   },
   packageCard: {
     backgroundColor: Colors.white,

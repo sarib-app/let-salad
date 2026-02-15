@@ -5,22 +5,21 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { purchaseSubscription } from '../../utils/api';
 
 const CheckoutScreen = ({ route, navigation }) => {
-  const { package: selectedPackage, duration, deliveryPreferences } = route.params;
-  const price = duration === 24 ? selectedPackage.price_24 : selectedPackage.price_10;
+  const { package: selectedPackage, subscriptionType, duration, deliveryPreferences } = route.params;
+  const price = selectedPackage.price;
+  const [submitting, setSubmitting] = useState(false);
 
   // Use delivery preferences from previous screen
   const [deliveryAddress, setDeliveryAddress] = useState(
-    deliveryPreferences?.address || {
-      name: 'John Doe',
-      street: 'King Fahd Road, Al Olaya',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-    }
+    deliveryPreferences?.address || null
   );
 
   const [paymentMethod, setPaymentMethod] = useState({
@@ -28,8 +27,17 @@ const CheckoutScreen = ({ route, navigation }) => {
     last4: '4242',
   });
 
-  const getMealsSummary = (meals) => {
-    return meals.map((m) => `${m.qty} ${m.meal_name}`).join(', ');
+  // Format contents object into readable summary
+  const getContentsSummary = (contents) => {
+    if (!contents) return '';
+    return Object.entries(contents)
+      .map(([key, qty]) => {
+        const label = key
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        return `${qty} ${label}`;
+      })
+      .join(', ');
   };
 
   const handleEditAddress = () => {
@@ -46,19 +54,46 @@ const CheckoutScreen = ({ route, navigation }) => {
     });
   };
 
-  const handlePlaceOrder = () => {
-    navigation.navigate('OrderConfirmation', {
-      package: selectedPackage,
-      duration,
-      price,
-      address: deliveryAddress,
-      paymentMethod,
-      deliveryPreferences,
-    });
+  const handlePlaceOrder = async () => {
+    if (!deliveryAddress?.id) {
+      Alert.alert('Address Required', 'Please select a delivery address before placing your order.');
+      return;
+    }
+    setSubmitting(true);
+
+    try {
+      const response = await purchaseSubscription({
+        subscription_type_id: subscriptionType?.id,
+        subscription_package_id: selectedPackage.id,
+        delivery_address_id: deliveryAddress.id,
+        payment_method: paymentMethod.type,
+        payment_reference: `PAY-${Date.now()}`,
+      });
+
+      if (response.code === 201 || response.code === 200) {
+        navigation.navigate('OrderConfirmation', {
+          subscription: response.subscription,
+          package: selectedPackage,
+          subscriptionType,
+          duration,
+          price,
+          address: deliveryAddress,
+          paymentMethod,
+          deliveryPreferences,
+        });
+      } else {
+        Alert.alert('Error', response.message || 'Failed to place order. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      Alert.alert('Error', error.message || 'Failed to place order. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const deliveryFee = 0; // Free delivery
-  const tax = (price * 0.15).toFixed(2); // 15% VAT
+  const tax = (price * 0.15).toFixed(2);
   const total = (parseFloat(price) + parseFloat(tax)).toFixed(2);
 
   return (
@@ -72,15 +107,21 @@ const CheckoutScreen = ({ route, navigation }) => {
           <Text style={styles.sectionTitle}>Order Summary</Text>
           <View style={styles.packageCard}>
             <View style={styles.packageHeader}>
-              <Text style={styles.packageTitle}>{selectedPackage.package_title}</Text>
+              <Text style={styles.packageTitle}>{selectedPackage.name}</Text>
               <View style={styles.durationBadge}>
                 <Text style={styles.durationText}>{duration} Days</Text>
               </View>
             </View>
             {selectedPackage.description && (
-              <Text style={styles.description}>{selectedPackage.description}</Text>
+              <Text style={styles.description} numberOfLines={2}>
+                {selectedPackage.description}
+              </Text>
             )}
-            <Text style={styles.mealsText}>{getMealsSummary(selectedPackage.meals)}</Text>
+            {selectedPackage.contents && (
+              <Text style={styles.mealsText}>
+                {getContentsSummary(selectedPackage.contents)}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -93,10 +134,19 @@ const CheckoutScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
           <View style={styles.infoCard}>
-            <Text style={styles.addressName}>{deliveryAddress.name}</Text>
-            <Text style={styles.addressText}>{deliveryAddress.street}</Text>
-            <Text style={styles.addressText}>{deliveryAddress.city}</Text>
-            <Text style={styles.addressPhone}>{deliveryAddress.phone}</Text>
+            {deliveryAddress ? (
+              <>
+                <Text style={styles.addressName}>
+                  {(deliveryAddress.type || 'Address').charAt(0).toUpperCase() + (deliveryAddress.type || 'address').slice(1)}
+                </Text>
+                <Text style={styles.addressText}>{deliveryAddress.street_address}</Text>
+                <Text style={styles.addressText}>
+                  {[deliveryAddress.district, deliveryAddress.city].filter(Boolean).join(', ')}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.addressText}>No address selected</Text>
+            )}
           </View>
         </View>
 
@@ -155,14 +205,22 @@ const CheckoutScreen = ({ route, navigation }) => {
             <Text style={styles.bottomLabel}>Total Amount</Text>
             <Text style={styles.bottomPrice}>{total} SAR</Text>
           </View>
-          <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder}>
+          <TouchableOpacity
+            style={styles.placeOrderButton}
+            onPress={handlePlaceOrder}
+            disabled={submitting}
+          >
             <LinearGradient
               colors={['#00B14F', '#00D95F']}
               style={styles.placeOrderGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.placeOrderText}>Place Order</Text>
+              {submitting ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.placeOrderText}>Place Order</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>

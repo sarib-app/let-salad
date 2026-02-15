@@ -8,21 +8,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { saveUserProfile } from '../../utils/storage';
+import { updateProfile } from '../../utils/api';
 
 const CompleteProfile = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     sex: '',
     weight: '',
     height: '',
     age: '',
   });
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
@@ -30,8 +32,7 @@ const CompleteProfile = ({ navigation }) => {
 
   const isFormValid = () => {
     return (
-      formData.firstName &&
-      formData.lastName &&
+      formData.name &&
       formData.email &&
       formData.sex &&
       formData.weight &&
@@ -42,11 +43,37 @@ const CompleteProfile = ({ navigation }) => {
 
   const handleContinue = async () => {
     if (isFormValid()) {
-      console.log('Profile data:', formData);
-      // Save profile to AsyncStorage
-      await saveUserProfile(formData);
-      // Navigate to parent navigator's MainApp screen
-      navigation.getParent().navigate('MainApp');
+      setLoading(true);
+      try {
+        // Backend expects: {name, email, language, sex, weight, height, age}
+        const profileData = {
+          name: formData.name,
+          email: formData.email,
+          sex: formData.sex,
+          weight: parseFloat(formData.weight),
+          height: parseInt(formData.height),
+          age: parseInt(formData.age),
+          language: 'en', // Default to English
+        };
+
+        const response = await updateProfile(profileData);
+
+        // Backend returns: {code: 200, message: "...", user: {...}}
+        if (response.code === 200) {
+          // Profile saved successfully, navigate to Preferences
+          navigation.navigate('Preferences');
+        } else {
+          Alert.alert('Error', response.message || 'Failed to save profile');
+        }
+      } catch (error) {
+        console.error('Profile Update Error:', error);
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to save profile. Please try again.'
+        );
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -66,28 +93,15 @@ const CompleteProfile = ({ navigation }) => {
           </Text>
 
           <View style={styles.formContainer}>
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Text style={styles.label}>First Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter first name"
-                  placeholderTextColor={Colors.textLight}
-                  value={formData.firstName}
-                  onChangeText={(value) => handleInputChange('firstName', value)}
-                />
-              </View>
-
-              <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Text style={styles.label}>Last Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter last name"
-                  placeholderTextColor={Colors.textLight}
-                  value={formData.lastName}
-                  onChangeText={(value) => handleInputChange('lastName', value)}
-                />
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your full name"
+                placeholderTextColor={Colors.textLight}
+                value={formData.name}
+                onChangeText={(value) => handleInputChange('name', value)}
+              />
             </View>
 
             <View style={styles.inputContainer}>

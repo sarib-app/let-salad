@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { fetchMenuItems } from '../../data/mockMenuData';
-import { updateSubscription } from '../../utils/storage';
+import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan } from '../../utils/api';
 
 const MealSelectionScreen = ({ route, navigation }) => {
   const { subscription, onMealsSelected } = route.params;
@@ -19,93 +18,119 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const [availableMenus, setAvailableMenus] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [tomorrowMeals, setTomorrowMeals] = useState([]);
-
-  // Mock daily meal delivery data (would come from backend)
-  const [mealHistory, setMealHistory] = useState([
-    {
-      date: '2025-12-28',
-      dateStr: 'Dec 28',
-      dayName: 'Saturday',
-      status: 'delivered',
-      deliveryTime: '10:30 AM',
-      meals: [
-        { name: 'Grilled Chicken Breast', category: 'Chicken' },
-        { name: 'Chicken Tikka Masala', category: 'Chicken' },
-        { name: 'Club Sandwich', category: 'Sandwich' },
-      ],
-    },
-    {
-      date: '2025-12-29',
-      dateStr: 'Dec 29',
-      dayName: 'Sunday',
-      status: 'in_preparation',
-      estimatedTime: '9:00 AM',
-      meals: [
-        { name: 'Lemon Herb Chicken', category: 'Chicken' },
-        { name: 'BBQ Chicken Wings', category: 'Chicken' },
-        { name: 'Grilled Chicken Sandwich', category: 'Sandwich' },
-      ],
-    },
-  ]);
-
-  // Get tomorrow's date
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowDateStr = tomorrow.toISOString().split('T')[0];
+  const [selectedMeals, setSelectedMeals] = useState([]);
+  const [mealPlans, setMealPlans] = useState([]);
+  const [availableDays, setAvailableDays] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [canSelectForDate, setCanSelectForDate] = useState(false);
+  const [deadlineTime, setDeadlineTime] = useState(null);
 
   useEffect(() => {
-    loadMenus();
-    loadTomorrowMeals();
+    loadData();
   }, []);
 
-  const loadMenus = async () => {
+  const loadData = async () => {
     try {
-      const chicken = await fetchMenuItems('chicken');
-      const sandwich = await fetchMenuItems('sandwich');
+      setLoading(true);
 
-      setAvailableMenus({
-        chicken: chicken.filter((item) => item.available),
-        sandwich: sandwich.filter((item) => item.available),
-      });
-      setLoading(false);
+      // Load available meals/days and subscription meal plans in parallel
+      const [availableResponse, mealPlansResponse] = await Promise.all([
+        getAvailableMeals(),
+        getSubscriptionMealPlans(subscription.id),
+      ]);
+
+      // Process available meals - group by category
+      if (availableResponse.code === 200) {
+        // Store available days
+        setAvailableDays(availableResponse.days || []);
+
+        // Group meals by category
+        const groupedMenus = {};
+        (availableResponse.meals || []).forEach((meal) => {
+          const category = meal.category.toLowerCase();
+          if (!groupedMenus[category]) {
+            groupedMenus[category] = [];
+          }
+          groupedMenus[category].push(meal);
+        });
+        setAvailableMenus(groupedMenus);
+      }
+
+      // Process subscription meal plans from backend
+      if (mealPlansResponse.code === 200) {
+        setMealPlans(mealPlansResponse.meal_plans || []);
+
+        // Find the first selectable date
+        const selectableDate = mealPlansResponse.meal_plans?.find(
+          (plan) => plan.can_select
+        );
+
+        if (selectableDate) {
+          setSelectedDate(selectableDate.date);
+          setCanSelectForDate(selectableDate.can_select);
+          setDeadlineTime(selectableDate.deadline);
+
+          // If meals already selected for this date, load them
+          if (selectableDate.meal_plan && selectableDate.meal_plan.items) {
+            const existingMeals = selectableDate.meal_plan.items.map((item) => ({
+              id: item.meal_id,
+              name: item.meal?.name || item.name,
+              category: item.meal?.category || item.category,
+              calories: item.meal?.calories || 0,
+              quantity: item.quantity,
+            }));
+            setSelectedMeals(existingMeals);
+          }
+        }
+      }
     } catch (error) {
-      console.error('Error loading menus:', error);
+      console.error('Error loading data:', error);
+      Alert.alert('Error', 'Failed to load meal data. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
-  const loadTomorrowMeals = () => {
-    // Load existing selection for tomorrow if available
-    if (subscription.meal_selections && subscription.meal_selections[tomorrowDateStr]) {
-      setTomorrowMeals(subscription.meal_selections[tomorrowDateStr].meals || []);
-    }
+  // Helper function to format date string (e.g., "Feb 10")
+  const formatDateStr = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Helper function to calculate time until deadline
+  const getTimeUntilDeadline = () => {
+    if (!deadlineTime) return { hours: 0, minutes: 0 };
+
+    const now = new Date();
+    // Handle both formats: "2026-02-09 20:00:00" and "2026-02-09T20:00:00.000000Z"
+    const deadline = new Date(deadlineTime.replace(' ', 'T'));
+    const diff = deadline - now;
+
+    if (diff <= 0) return { hours: 0, minutes: 0 };
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return { hours, minutes };
   };
 
   const getMealRequirements = () => {
     // Get meal requirements from subscription
     const requirements = {};
-    subscription.meals.forEach((meal) => {
-      const mealType = meal.meal_name.toLowerCase();
-      requirements[mealType] = meal.qty;
-    });
+    if (subscription.meals) {
+      subscription.meals.forEach((meal) => {
+        const mealType = meal.meal_name.toLowerCase();
+        requirements[mealType] = meal.qty;
+      });
+    }
     return requirements;
-  };
-
-  const canUpdateTomorrow = () => {
-    // Check if current time is before 8:00 PM today
-    const now = new Date();
-    const cutoffTime = new Date();
-    cutoffTime.setHours(20, 0, 0, 0); // 8:00 PM today
-
-    return now < cutoffTime;
   };
 
   const isSelectionComplete = () => {
     const requirements = getMealRequirements();
     const selected = {};
 
-    tomorrowMeals.forEach((meal) => {
+    selectedMeals.forEach((meal) => {
       const type = meal.category.toLowerCase();
       selected[type] = (selected[type] || 0) + 1;
     });
@@ -120,20 +145,20 @@ const MealSelectionScreen = ({ route, navigation }) => {
     return true;
   };
 
-  const handleSelectMeal = (meal, category) => {
-    if (!canUpdateTomorrow()) {
+  const handleSelectMeal = (meal) => {
+    if (!canSelectForDate) {
       Alert.alert(
         'Selection Closed',
-        "You can only select tomorrow's meals before 8:00 PM today. The selection window has closed."
+        'The selection window for this date has closed.'
       );
       return;
     }
 
     const requirements = getMealRequirements();
-    const categoryType = category.toLowerCase();
+    const categoryType = meal.category.toLowerCase();
 
     // Count current selections for this category
-    const currentCount = tomorrowMeals.filter(
+    const currentCount = selectedMeals.filter(
       (m) => m.category.toLowerCase() === categoryType
     ).length;
 
@@ -141,54 +166,85 @@ const MealSelectionScreen = ({ route, navigation }) => {
     if (currentCount >= (requirements[categoryType] || 0)) {
       Alert.alert(
         'Limit Reached',
-        `You can only select ${requirements[categoryType]} ${category} meal(s) for tomorrow.`
+        `You can only select ${requirements[categoryType]} ${meal.category} meal(s).`
       );
       return;
     }
 
     // Add meal to selections
-    setTomorrowMeals([
-      ...tomorrowMeals,
+    setSelectedMeals([
+      ...selectedMeals,
       {
-        ...meal,
-        category,
+        id: meal.id,
+        name: meal.name,
+        category: meal.category,
+        calories: meal.calories,
       },
     ]);
   };
 
   const handleRemoveMeal = (mealIndex) => {
-    if (!canUpdateTomorrow()) {
+    if (!canSelectForDate) {
       Alert.alert(
         'Selection Closed',
-        "You can only modify tomorrow's meals before 8:00 PM today. The selection window has closed."
+        'The selection window for this date has closed.'
       );
       return;
     }
 
-    const updatedMeals = tomorrowMeals.filter((_, index) => index !== mealIndex);
-    setTomorrowMeals(updatedMeals);
+    const updatedMeals = selectedMeals.filter((_, index) => index !== mealIndex);
+    setSelectedMeals(updatedMeals);
+  };
+
+  const handleSelectDate = (day) => {
+    // Find the meal plan for this date from subscription meal plans
+    const planForDate = mealPlans.find((p) => p.date === day.date);
+
+    setSelectedDate(day.date);
+    setCanSelectForDate(day.can_select);
+    setDeadlineTime(day.deadline);
+
+    // Load existing meals if any
+    if (planForDate?.meal_plan?.items) {
+      const existingMeals = planForDate.meal_plan.items.map((item) => ({
+        id: item.meal_id,
+        name: item.meal?.name || item.name,
+        category: item.meal?.category || item.category,
+        calories: item.meal?.calories || 0,
+        quantity: item.quantity,
+      }));
+      setSelectedMeals(existingMeals);
+    } else {
+      setSelectedMeals([]);
+    }
   };
 
   const handleSubmitSelection = async () => {
     if (!isSelectionComplete()) {
       Alert.alert(
         'Incomplete Selection',
-        "Please select all required meals for tomorrow before submitting."
+        'Please select all required meals before submitting.'
       );
       return;
     }
 
-    if (!canUpdateTomorrow()) {
+    if (!canSelectForDate) {
       Alert.alert(
         'Selection Closed',
-        "The selection window has closed. You can only update tomorrow's meals before 8:00 PM today."
+        'The selection window has closed for this date.'
       );
       return;
     }
+
+    const selectedDateFormatted = new Date(selectedDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    });
 
     Alert.alert(
       'Confirm Meal Selection',
-      `Confirm meals for ${tomorrow.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}?`,
+      `Confirm meals for ${selectedDateFormatted}?`,
       [
         {
           text: 'Cancel',
@@ -199,30 +255,36 @@ const MealSelectionScreen = ({ route, navigation }) => {
           onPress: async () => {
             setSubmitting(true);
 
-            // Update meal selections for tomorrow
-            const currentSelections = subscription.meal_selections || {};
-            currentSelections[tomorrowDateStr] = {
-              meals: tomorrowMeals,
-              selected_at: new Date().toISOString(),
-            };
+            try {
+              // Prepare meals payload for backend
+              const mealsPayload = selectedMeals.map((meal) => ({
+                meal_id: meal.id,
+                quantity: 1,
+              }));
 
-            const updated = await updateSubscription(subscription.id, {
-              meal_selections: currentSelections,
-              last_meal_selection_update: new Date().toISOString(),
-            });
+              const response = await saveMealPlan(subscription.id, {
+                delivery_date: selectedDate,
+                meals: mealsPayload,
+              });
 
-            setSubmitting(false);
-
-            if (updated) {
-              Alert.alert('Success', "Tomorrow's meals have been confirmed!", [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    if (onMealsSelected) onMealsSelected();
-                    navigation.goBack();
+              if (response.code === 200) {
+                Alert.alert('Success', 'Your meals have been confirmed!', [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      if (onMealsSelected) onMealsSelected();
+                      navigation.goBack();
+                    },
                   },
-                },
-              ]);
+                ]);
+              } else {
+                Alert.alert('Error', response.message || 'Failed to save meal selection.');
+              }
+            } catch (error) {
+              console.error('Error saving meal plan:', error);
+              Alert.alert('Error', error.message || 'Failed to save meal selection. Please try again.');
+            } finally {
+              setSubmitting(false);
             }
           },
         },
@@ -238,28 +300,25 @@ const MealSelectionScreen = ({ route, navigation }) => {
         return { text: 'Preparing', color: '#FFB020', icon: '👨‍🍳' };
       case 'out_for_delivery':
         return { text: 'On the Way', color: '#00B4D8', icon: '🚗' };
+      case 'pending':
+        return { text: 'Pending', color: '#9E9E9E', icon: '📅' };
       case 'scheduled':
         return { text: 'Scheduled', color: Colors.textSecondary, icon: '📅' };
       default:
-        return { text: status, color: Colors.textSecondary, icon: '' };
+        return { text: status || 'Unknown', color: Colors.textSecondary, icon: '' };
     }
   };
 
   const requirements = getMealRequirements();
-  const canUpdate = canUpdateTomorrow();
   const isComplete = isSelectionComplete();
-
-  const now = new Date();
-  const cutoffTime = new Date();
-  cutoffTime.setHours(20, 0, 0, 0);
-  const hoursUntilCutoff = Math.max(0, Math.floor((cutoffTime - now) / (1000 * 60 * 60)));
-  const minutesUntilCutoff = Math.max(0, Math.floor(((cutoffTime - now) % (1000 * 60 * 60)) / (1000 * 60)));
+  const timeUntil = getTimeUntilDeadline();
+  const totalRequired = Object.values(requirements).reduce((a, b) => a + b, 0);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading menu...</Text>
+        <Text style={styles.loadingText}>Loading meals...</Text>
       </View>
     );
   }
@@ -271,14 +330,14 @@ const MealSelectionScreen = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         {/* Selection Window Info */}
-        <View style={[styles.infoBanner, !canUpdate && styles.infoBannerClosed]}>
-          <Text style={styles.infoIcon}>{canUpdate ? '⏰' : '🔒'}</Text>
+        <View style={[styles.infoBanner, !canSelectForDate && styles.infoBannerClosed]}>
+          <Text style={styles.infoIcon}>{canSelectForDate ? '⏰' : '🔒'}</Text>
           <View style={styles.infoContent}>
-            {canUpdate ? (
+            {canSelectForDate ? (
               <>
                 <Text style={styles.infoTitle}>Selection Window Open</Text>
                 <Text style={styles.infoText}>
-                  {hoursUntilCutoff}h {minutesUntilCutoff}m until 8:00 PM cutoff
+                  {timeUntil.hours}h {timeUntil.minutes}m until deadline
                 </Text>
               </>
             ) : (
@@ -292,136 +351,182 @@ const MealSelectionScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Tomorrow's Meal Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Tomorrow - {tomorrow.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-          </Text>
-
-          <View style={styles.selectedMealsCard}>
-            <Text style={styles.selectedMealsTitle}>
-              Selected Meals ({tomorrowMeals.length}/{Object.values(requirements).reduce((a, b) => a + b, 0)})
+        {/* Selected Date Meal Selection */}
+        {selectedDate && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+              })}
             </Text>
 
-            {tomorrowMeals.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  {canUpdate ? 'No meals selected yet' : 'No meals selected for tomorrow'}
-                </Text>
-              </View>
-            ) : (
-              tomorrowMeals.map((meal, index) => (
-                <View key={index} style={styles.selectedMealCard}>
-                  <View style={styles.selectedMealInfo}>
-                    <Text style={styles.selectedMealName}>{meal.name}</Text>
-                    <Text style={styles.selectedMealCategory}>{meal.category}</Text>
-                  </View>
-                  {canUpdate && (
-                    <TouchableOpacity onPress={() => handleRemoveMeal(index)}>
-                      <Text style={styles.removeButton}>✕</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))
-            )}
+            <View style={styles.selectedMealsCard}>
+              <Text style={styles.selectedMealsTitle}>
+                Selected Meals ({selectedMeals.length}/{totalRequired})
+              </Text>
 
-            {isComplete && (
-              <View style={styles.completeBanner}>
-                <Text style={styles.completeText}>✓ All meals selected</Text>
-              </View>
-            )}
+              {selectedMeals.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>
+                    {canSelectForDate ? 'No meals selected yet' : 'No meals selected'}
+                  </Text>
+                </View>
+              ) : (
+                selectedMeals.map((meal, index) => (
+                  <View key={index} style={styles.selectedMealCard}>
+                    <View style={styles.selectedMealInfo}>
+                      <Text style={styles.selectedMealName}>{meal.name}</Text>
+                      <Text style={styles.selectedMealCategory}>{meal.category}</Text>
+                    </View>
+                    {canSelectForDate && (
+                      <TouchableOpacity onPress={() => handleRemoveMeal(index)}>
+                        <Text style={styles.removeButton}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              )}
+
+              {isComplete && (
+                <View style={styles.completeBanner}>
+                  <Text style={styles.completeText}>✓ All meals selected</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Available Menus (only if window is open) */}
-        {canUpdate && (
+        {canSelectForDate && (
           <>
-            {requirements.chicken > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Chicken Meals (Select {requirements.chicken})
-                </Text>
-                <View style={styles.menuGrid}>
-                  {availableMenus.chicken.map((meal) => (
-                    <TouchableOpacity
-                      key={meal.id}
-                      style={styles.mealCard}
-                      onPress={() => handleSelectMeal(meal, 'Chicken')}
-                    >
-                      <Text style={styles.mealName}>{meal.name}</Text>
-                      <Text style={styles.mealCalories}>{meal.calories} cal</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
+            {Object.entries(requirements).map(([category, qty]) => {
+              const categoryMeals = availableMenus[category] || [];
+              if (qty <= 0 || categoryMeals.length === 0) return null;
 
-            {requirements.sandwich > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Sandwiches (Select {requirements.sandwich})
-                </Text>
-                <View style={styles.menuGrid}>
-                  {availableMenus.sandwich.map((meal) => (
-                    <TouchableOpacity
-                      key={meal.id}
-                      style={styles.mealCard}
-                      onPress={() => handleSelectMeal(meal, 'Sandwich')}
-                    >
-                      <Text style={styles.mealName}>{meal.name}</Text>
-                      <Text style={styles.mealCalories}>{meal.calories} cal</Text>
-                    </TouchableOpacity>
-                  ))}
+              const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
+              const selectedCount = selectedMeals.filter(
+                (m) => m.category.toLowerCase() === category
+              ).length;
+
+              return (
+                <View key={category} style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    {categoryLabel} ({selectedCount}/{qty})
+                  </Text>
+                  <View style={styles.menuGrid}>
+                    {categoryMeals.map((meal) => {
+                      const isSelected = selectedMeals.some((m) => m.id === meal.id);
+                      return (
+                        <TouchableOpacity
+                          key={meal.id}
+                          style={[styles.mealCard, isSelected && styles.mealCardSelected]}
+                          onPress={() => handleSelectMeal(meal)}
+                        >
+                          <Text style={[styles.mealName, isSelected && styles.mealNameSelected]}>
+                            {meal.name}
+                          </Text>
+                          <Text style={styles.mealCalories}>{meal.calories} cal</Text>
+                          {isSelected && (
+                            <View style={styles.selectedBadge}>
+                              <Text style={styles.selectedBadgeText}>✓</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
-            )}
+              );
+            })}
           </>
         )}
 
-        {/* Meal History */}
+        {/* Meal Plans / History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Meal History</Text>
+          <Text style={styles.sectionTitle}>Upcoming Meals</Text>
 
-          {mealHistory.map((day, index) => {
-            const statusInfo = getStatusBadge(day.status);
-            return (
-              <View key={index} style={styles.historyCard}>
-                <View style={styles.historyHeader}>
-                  <View>
-                    <Text style={styles.historyDay}>{day.dayName}</Text>
-                    <Text style={styles.historyDate}>{day.dateStr}</Text>
-                  </View>
-                  <View style={[styles.historyStatusBadge, { backgroundColor: statusInfo.color }]}>
-                    <Text style={styles.historyStatusIcon}>{statusInfo.icon}</Text>
-                    <Text style={styles.historyStatusText}>{statusInfo.text}</Text>
-                  </View>
-                </View>
+          {mealPlans.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No meal plans yet</Text>
+            </View>
+          ) : (
+            mealPlans.map((day, index) => {
+              const status = day.meal_plan?.status || (day.meal_plan ? 'pending' : 'scheduled');
+              const statusInfo = getStatusBadge(status);
+              const hasMeals = day.meal_plan && day.meal_plan.items && day.meal_plan.items.length > 0;
+              const isCurrentSelection = day.date === selectedDate;
 
-                {day.deliveryTime && (
-                  <Text style={styles.historyTime}>Delivered at {day.deliveryTime}</Text>
-                )}
-                {day.estimatedTime && (
-                  <Text style={styles.historyTime}>Estimated delivery: {day.estimatedTime}</Text>
-                )}
-
-                <View style={styles.historyMeals}>
-                  {day.meals.map((meal, mealIndex) => (
-                    <View key={mealIndex} style={styles.historyMealItem}>
-                      <Text style={styles.historyMealBullet}>•</Text>
-                      <Text style={styles.historyMealText}>{meal.name}</Text>
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.historyCard,
+                    isCurrentSelection && styles.historyCardActive,
+                  ]}
+                  onPress={() => handleSelectDate(day)}
+                  disabled={!day.can_select && !hasMeals}
+                >
+                  <View style={styles.historyHeader}>
+                    <View>
+                      <Text style={styles.historyDay}>{day.day_name}</Text>
+                      <Text style={styles.historyDate}>
+                        {day.dateStr || formatDateStr(day.date)}
+                      </Text>
                     </View>
-                  ))}
-                </View>
-              </View>
-            );
-          })}
+                    {hasMeals && (
+                      <View style={[styles.historyStatusBadge, { backgroundColor: statusInfo.color }]}>
+                        <Text style={styles.historyStatusIcon}>{statusInfo.icon}</Text>
+                        <Text style={styles.historyStatusText}>{statusInfo.text}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {day.deliveryTime && (
+                    <Text style={styles.historyTime}>Delivered at {day.deliveryTime}</Text>
+                  )}
+                  {day.estimatedTime && (
+                    <Text style={styles.historyTime}>Estimated delivery: {day.estimatedTime}</Text>
+                  )}
+
+                  {hasMeals ? (
+                    <View style={styles.historyMeals}>
+                      {day.meal_plan.items.map((item, mealIndex) => (
+                        <View key={mealIndex} style={styles.historyMealItem}>
+                          <Text style={styles.historyMealBullet}>•</Text>
+                          <Text style={styles.historyMealText}>
+                            {item.meal?.name || item.name}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.noMealsState}>
+                      <Text style={styles.noMealsText}>
+                        {day.can_select ? 'Tap to select meals' : 'No meals selected'}
+                      </Text>
+                    </View>
+                  )}
+
+                  {day.can_select && !isCurrentSelection && (
+                    <View style={styles.tapIndicator}>
+                      <Text style={styles.tapIndicatorText}>
+                        {hasMeals ? 'Tap to modify' : 'Tap to select'}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Submit Button (only if window is open) */}
-      {canUpdate && (
+      {canSelectForDate && (
         <View style={styles.bottomContainer}>
           <TouchableOpacity
             style={styles.submitButton}
@@ -437,7 +542,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
               {submitting ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.submitText}>Confirm Tomorrow's Meals</Text>
+                <Text style={styles.submitText}>Confirm Meal Selection</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -588,6 +693,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     width: '48%',
+    position: 'relative',
+  },
+  mealCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F0F9F4',
   },
   mealName: {
     ...Fonts.semiBold,
@@ -595,10 +705,29 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: 4,
   },
+  mealNameSelected: {
+    color: Colors.primary,
+  },
   mealCalories: {
     ...Fonts.regular,
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedBadgeText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   historyCard: {
     backgroundColor: Colors.white,
@@ -607,6 +736,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  historyCardActive: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
   },
   historyHeader: {
     flexDirection: 'row',
@@ -665,6 +798,27 @@ const styles = StyleSheet.create({
     ...Fonts.regular,
     fontSize: 14,
     color: Colors.textPrimary,
+  },
+  noMealsState: {
+    paddingVertical: Spacing.sm,
+  },
+  noMealsText: {
+    ...Fonts.regular,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  tapIndicator: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  tapIndicatorText: {
+    ...Fonts.medium,
+    fontSize: 12,
+    color: Colors.primary,
+    textAlign: 'center',
   },
   bottomContainer: {
     position: 'absolute',

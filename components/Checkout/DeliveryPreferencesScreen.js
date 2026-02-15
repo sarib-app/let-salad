@@ -1,46 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { listAddresses } from '../../utils/api';
 
 const DeliveryPreferencesScreen = ({ route, navigation }) => {
-  const { package: selectedPackage, duration } = route.params;
+  const { package: selectedPackage, subscriptionType, duration } = route.params;
 
-  // Mock saved addresses
-  const [savedAddresses] = useState([
-    {
-      id: '1',
-      name: 'John Doe',
-      street: 'King Fahd Road, Al Olaya',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-      isDefault: true,
-    },
-    {
-      id: '2',
-      name: 'John Doe',
-      street: 'Prince Mohammed Bin Abdulaziz Road',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-      isDefault: false,
-    },
-    {
-      id: '3',
-      name: 'Office',
-      street: 'King Abdullah Financial District',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-      isDefault: false,
-    },
-  ]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [addressLoading, setAddressLoading] = useState(true);
 
-  const [selectedAddressId, setSelectedAddressId] = useState('1');
+  // Load addresses from API when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadAddresses();
+    }, [])
+  );
+
+  const loadAddresses = async () => {
+    try {
+      setAddressLoading(true);
+      const response = await listAddresses();
+      if (response.code === 200) {
+        const addrs = response.addresses || [];
+        setSavedAddresses(addrs);
+        // Auto-select primary address, or first
+        const primary = addrs.find((a) => a.is_primary);
+        if (primary) {
+          setSelectedAddressId(primary.id);
+        } else if (addrs.length > 0) {
+          setSelectedAddressId(addrs[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading addresses:', error);
+      Alert.alert('Error', 'Failed to load addresses.');
+    } finally {
+      setAddressLoading(false);
+    }
+  };
 
   // Time slots
   const timeSlots = [
@@ -71,13 +79,7 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
   };
 
   const handleAddNewAddress = () => {
-    navigation.navigate('AddressSelection', {
-      currentAddress: savedAddresses.find((addr) => addr.id === selectedAddressId),
-      onAddressSelect: (address) => {
-        // In real app, would add to saved addresses
-        console.log('New address:', address);
-      },
-    });
+    navigation.navigate('AddEditAddress', {});
   };
 
   const handleToggleDay = (dayId) => {
@@ -96,6 +98,11 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
   };
 
   const handleContinue = () => {
+    if (!selectedAddressId) {
+      Alert.alert('Address Required', 'Please select or add a delivery address.');
+      return;
+    }
+
     const selectedAddress = savedAddresses.find(
       (addr) => addr.id === selectedAddressId
     );
@@ -131,39 +138,52 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
             Where should we deliver your meals?
           </Text>
 
-          {savedAddresses.map((address) => (
-            <TouchableOpacity
-              key={address.id}
-              style={[
-                styles.addressCard,
-                selectedAddressId === address.id && styles.addressCardSelected,
-              ]}
-              onPress={() => handleSelectAddress(address.id)}
-            >
-              <View style={styles.radioContainer}>
-                <View
+          {addressLoading ? (
+            <View style={styles.addressLoadingContainer}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.addressLoadingText}>Loading addresses...</Text>
+            </View>
+          ) : (
+            <>
+              {savedAddresses.map((address) => (
+                <TouchableOpacity
+                  key={address.id}
                   style={[
-                    styles.radioOuter,
-                    selectedAddressId === address.id && styles.radioOuterSelected,
+                    styles.addressCard,
+                    selectedAddressId === address.id && styles.addressCardSelected,
                   ]}
+                  onPress={() => handleSelectAddress(address.id)}
                 >
-                  {selectedAddressId === address.id && <View style={styles.radioInner} />}
-                </View>
-                <View style={styles.addressContent}>
-                  <View style={styles.addressHeader}>
-                    <Text style={styles.addressName}>{address.name}</Text>
-                    {address.isDefault && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultText}>Default</Text>
+                  <View style={styles.radioContainer}>
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        selectedAddressId === address.id && styles.radioOuterSelected,
+                      ]}
+                    >
+                      {selectedAddressId === address.id && <View style={styles.radioInner} />}
+                    </View>
+                    <View style={styles.addressContent}>
+                      <View style={styles.addressHeader}>
+                        <Text style={styles.addressName}>
+                          {(address.type || 'Address').charAt(0).toUpperCase() + (address.type || 'address').slice(1)}
+                        </Text>
+                        {address.is_primary && (
+                          <View style={styles.defaultBadge}>
+                            <Text style={styles.defaultText}>Primary</Text>
+                          </View>
+                        )}
                       </View>
-                    )}
+                      <Text style={styles.addressText}>{address.street_address}</Text>
+                      <Text style={styles.addressText}>
+                        {[address.district, address.city].filter(Boolean).join(', ')}
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.addressText}>{address.street}</Text>
-                  <Text style={styles.addressText}>{address.city}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
 
           <TouchableOpacity style={styles.addNewButton} onPress={handleAddNewAddress}>
             <Text style={styles.addNewIcon}>+</Text>
@@ -404,6 +424,18 @@ const styles = StyleSheet.create({
     ...Fonts.semiBold,
     fontSize: 14,
     color: Colors.primary,
+  },
+  addressLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  addressLoadingText: {
+    ...Fonts.medium,
+    fontSize: 13,
+    color: Colors.textSecondary,
   },
   timeSlotsContainer: {
     gap: Spacing.sm,

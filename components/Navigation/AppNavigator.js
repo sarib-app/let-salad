@@ -11,6 +11,8 @@ import CheckoutScreen from '../Checkout/CheckoutScreen';
 import AddressSelectionScreen from '../Checkout/AddressSelectionScreen';
 import PaymentMethodScreen from '../Checkout/PaymentMethodScreen';
 import OrderConfirmationScreen from '../Checkout/OrderConfirmationScreen';
+import AddressManagementScreen from '../Address/AddressManagementScreen';
+import AddEditAddressScreen from '../Address/AddEditAddressScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -94,6 +96,24 @@ const AppNavigator = () => {
         options={{
           headerShown: false,
         }}
+      />
+      <Stack.Screen
+        name="AddressManagement"
+        component={AddressManagementScreen}
+        options={{
+          headerShown: true,
+          headerTitle: 'My Addresses',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="AddEditAddress"
+        component={AddEditAddressScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          headerTitle: route.params?.address ? 'Edit Address' : 'Add Address',
+          headerBackTitle: 'Back',
+        })}
       />
     </Stack.Navigator>
   );

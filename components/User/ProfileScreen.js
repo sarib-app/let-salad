@@ -1,8 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
+
+  const handleMenuPress = (item) => {
+    switch (item.id) {
+      case 3: // Delivery Address
+        navigation.navigate('AddressManagement');
+        break;
+      default:
+        break;
+    }
+  };
   const menuItems = [
     { id: 1, title: 'Edit Profile', icon: '✏️' },
     { id: 2, title: 'My Preferences', icon: '⚙️' },
@@ -26,7 +38,7 @@ const ProfileScreen = () => {
 
       <ScrollView style={styles.menuContainer} showsVerticalScrollIndicator={false}>
         {menuItems.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.menuItem}>
+          <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuPress(item)}>
             <View style={styles.menuItemLeft}>
               <Text style={styles.menuIcon}>{item.icon}</Text>
               <Text style={styles.menuTitle}>{item.title}</Text>

@@ -8,17 +8,49 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { t } from '../../utils/lang';
+import { sendOTP } from '../../utils/api';
 
 const Login = ({ navigation }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (phoneNumber.length >= 9) {
-      navigation.navigate('OTPVerification', { phoneNumber: `+966${phoneNumber}` });
+      setLoading(true);
+      try {
+        const fullPhoneNumber = `+966${phoneNumber}`;
+        const response = await sendOTP(fullPhoneNumber);
+
+        // Backend returns: {code: 200, message: "OTP sent successfully", otp: "803483"}
+        if (response.code === 200) {
+          // Log OTP for testing
+          if (response.otp) {
+            console.log('==========================================');
+            console.log('🔐 OTP CODE:', response.otp);
+            console.log('==========================================');
+          }
+
+          navigation.navigate('OTPVerification', {
+            phoneNumber: fullPhoneNumber,
+          });
+        } else {
+          Alert.alert('Error', response.message || 'Failed to send OTP');
+        }
+      } catch (error) {
+        console.error('Send OTP Error:', error);
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to send OTP. Please try again.'
+        );
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -57,19 +89,23 @@ const Login = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, phoneNumber.length < 9 && styles.buttonDisabled]}
+            style={[styles.button, (phoneNumber.length < 9 || loading) && styles.buttonDisabled]}
             onPress={handleSendOTP}
-            disabled={phoneNumber.length < 9}
+            disabled={phoneNumber.length < 9 || loading}
           >
             <LinearGradient
-              colors={phoneNumber.length >= 9 ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
+              colors={phoneNumber.length >= 9 && !loading ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
               style={styles.buttonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={[styles.buttonText, phoneNumber.length < 9 && styles.buttonTextDisabled]}>
-                Continue
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={[styles.buttonText, phoneNumber.length < 9 && styles.buttonTextDisabled]}>
+                  Continue
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 

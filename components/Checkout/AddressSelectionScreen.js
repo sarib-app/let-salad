@@ -1,56 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { listAddresses } from '../../utils/api';
 
 const AddressSelectionScreen = ({ route, navigation }) => {
   const { currentAddress, onAddressSelect } = route.params;
 
-  // Mock saved addresses
-  const [savedAddresses] = useState([
-    {
-      id: '1',
-      name: 'John Doe',
-      street: 'King Fahd Road, Al Olaya',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-      isDefault: true,
-    },
-    {
-      id: '2',
-      name: 'John Doe',
-      street: 'Prince Mohammed Bin Abdulaziz Road',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-      isDefault: false,
-    },
-    {
-      id: '3',
-      name: 'Office',
-      street: 'King Abdullah Financial District',
-      city: 'Riyadh',
-      phone: '+966 50 123 4567',
-      isDefault: false,
-    },
-  ]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(currentAddress?.id || null);
+  const [loading, setLoading] = useState(true);
 
-  const [selectedAddressId, setSelectedAddressId] = useState('1');
-  const [showAddNew, setShowAddNew] = useState(false);
+  // Load addresses from API when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadAddresses();
+    }, [])
+  );
 
-  // New address form
-  const [newAddress, setNewAddress] = useState({
-    name: '',
-    street: '',
-    city: 'Riyadh',
-    phone: '',
-  });
+  const loadAddresses = async () => {
+    try {
+      setLoading(true);
+      const response = await listAddresses();
+      if (response.code === 200) {
+        const addrs = response.addresses || [];
+        setSavedAddresses(addrs);
+        // Auto-select: current address > primary > first
+        if (!selectedAddressId) {
+          const primary = addrs.find((a) => a.is_primary);
+          if (primary) {
+            setSelectedAddressId(primary.id);
+          } else if (addrs.length > 0) {
+            setSelectedAddressId(addrs[0].id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading addresses:', error);
+      Alert.alert('Error', 'Failed to load addresses.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectAddress = (addressId) => {
     setSelectedAddressId(addressId);
@@ -65,95 +65,15 @@ const AddressSelectionScreen = ({ route, navigation }) => {
   };
 
   const handleAddNewAddress = () => {
-    if (newAddress.name && newAddress.street && newAddress.phone) {
-      // In real app, save to backend
-      const newAddr = {
-        id: Date.now().toString(),
-        ...newAddress,
-        isDefault: false,
-      };
-
-      if (onAddressSelect) {
-        onAddressSelect(newAddr);
-      }
-      navigation.goBack();
-    }
+    navigation.navigate('AddEditAddress', {});
   };
 
-  if (showAddNew) {
+  if (loading) {
     return (
       <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.title}>Add New Address</Text>
-
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your name"
-                value={newAddress.name}
-                onChangeText={(text) => setNewAddress({ ...newAddress, name: text })}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Street Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Building, Street, Area"
-                value={newAddress.street}
-                onChangeText={(text) => setNewAddress({ ...newAddress, street: text })}
-                multiline
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>City</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="City"
-                value={newAddress.city}
-                onChangeText={(text) => setNewAddress({ ...newAddress, city: text })}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="+966 50 123 4567"
-                value={newAddress.phone}
-                onChangeText={(text) => setNewAddress({ ...newAddress, phone: text })}
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-
-          <View style={{ height: 100 }} />
-        </ScrollView>
-
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => setShowAddNew(false)}
-          >
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.primaryButton} onPress={handleAddNewAddress}>
-            <LinearGradient
-              colors={['#00B14F', '#00D95F']}
-              style={styles.buttonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Text style={styles.primaryButtonText}>Save Address</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading addresses...</Text>
         </View>
       </View>
     );
@@ -167,44 +87,55 @@ const AddressSelectionScreen = ({ route, navigation }) => {
       >
         <Text style={styles.title}>Select Delivery Address</Text>
 
-        {savedAddresses.map((address) => (
-          <TouchableOpacity
-            key={address.id}
-            style={[
-              styles.addressCard,
-              selectedAddressId === address.id && styles.addressCardSelected,
-            ]}
-            onPress={() => handleSelectAddress(address.id)}
-          >
-            <View style={styles.radioContainer}>
-              <View
-                style={[
-                  styles.radioOuter,
-                  selectedAddressId === address.id && styles.radioOuterSelected,
-                ]}
-              >
-                {selectedAddressId === address.id && <View style={styles.radioInner} />}
-              </View>
-              <View style={styles.addressContent}>
-                <View style={styles.addressHeader}>
-                  <Text style={styles.addressName}>{address.name}</Text>
-                  {address.isDefault && (
-                    <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultText}>Default</Text>
-                    </View>
-                  )}
+        {savedAddresses.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No addresses found. Add a new address to continue.
+            </Text>
+          </View>
+        ) : (
+          savedAddresses.map((address) => (
+            <TouchableOpacity
+              key={address.id}
+              style={[
+                styles.addressCard,
+                selectedAddressId === address.id && styles.addressCardSelected,
+              ]}
+              onPress={() => handleSelectAddress(address.id)}
+            >
+              <View style={styles.radioContainer}>
+                <View
+                  style={[
+                    styles.radioOuter,
+                    selectedAddressId === address.id && styles.radioOuterSelected,
+                  ]}
+                >
+                  {selectedAddressId === address.id && <View style={styles.radioInner} />}
                 </View>
-                <Text style={styles.addressText}>{address.street}</Text>
-                <Text style={styles.addressText}>{address.city}</Text>
-                <Text style={styles.addressPhone}>{address.phone}</Text>
+                <View style={styles.addressContent}>
+                  <View style={styles.addressHeader}>
+                    <Text style={styles.addressName}>
+                      {(address.type || 'Address').charAt(0).toUpperCase() + (address.type || 'address').slice(1)}
+                    </Text>
+                    {address.is_primary && (
+                      <View style={styles.defaultBadge}>
+                        <Text style={styles.defaultText}>Primary</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.addressText}>{address.street_address}</Text>
+                  <Text style={styles.addressText}>
+                    {[address.district, address.city].filter(Boolean).join(', ')}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))
+        )}
 
         <TouchableOpacity
           style={styles.addNewButton}
-          onPress={() => setShowAddNew(true)}
+          onPress={handleAddNewAddress}
         >
           <Text style={styles.addNewIcon}>+</Text>
           <Text style={styles.addNewText}>Add New Address</Text>
@@ -214,9 +145,13 @@ const AddressSelectionScreen = ({ route, navigation }) => {
       </ScrollView>
 
       <View style={styles.bottomContainer}>
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+        <TouchableOpacity
+          style={[styles.confirmButton, !selectedAddressId && styles.confirmButtonDisabled]}
+          onPress={handleConfirm}
+          disabled={!selectedAddressId}
+        >
           <LinearGradient
-            colors={['#00B14F', '#00D95F']}
+            colors={selectedAddressId ? ['#00B14F', '#00D95F'] : ['#CCCCCC', '#CCCCCC']}
             style={styles.buttonGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -234,6 +169,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...Fonts.medium,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: Spacing.md,
+  },
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxl,
@@ -243,6 +189,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: Colors.textPrimary,
     marginBottom: Spacing.lg,
+  },
+  emptyContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...Fonts.medium,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   addressCard: {
     backgroundColor: Colors.white,
@@ -311,12 +267,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 2,
   },
-  addressPhone: {
-    ...Fonts.medium,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    marginTop: Spacing.xs,
-  },
   addNewButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,29 +289,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.primary,
   },
-  form: {
-    marginTop: Spacing.md,
-  },
-  inputGroup: {
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    ...Fonts.semiBold,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
-  input: {
-    ...Fonts.regular,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    minHeight: 48,
-  },
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
@@ -372,30 +299,14 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
-    flexDirection: 'row',
-    gap: Spacing.md,
   },
   confirmButton: {
-    flex: 1,
     height: 56,
     borderRadius: BorderRadius.full,
     overflow: 'hidden',
   },
-  primaryButton: {
-    flex: 1,
-    height: 56,
-    borderRadius: BorderRadius.full,
-    overflow: 'hidden',
-  },
-  secondaryButton: {
-    flex: 1,
-    height: 56,
-    borderRadius: BorderRadius.full,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
+  confirmButtonDisabled: {
+    opacity: 0.6,
   },
   buttonGradient: {
     flex: 1,
@@ -406,16 +317,6 @@ const styles = StyleSheet.create({
     ...Fonts.bold,
     fontSize: 16,
     color: Colors.white,
-  },
-  primaryButtonText: {
-    ...Fonts.bold,
-    fontSize: 16,
-    color: Colors.white,
-  },
-  secondaryButtonText: {
-    ...Fonts.semiBold,
-    fontSize: 16,
-    color: Colors.textPrimary,
   },
 });
 

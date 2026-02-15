@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { getActiveSubscriptions } from '../../utils/storage';
+import { getUserSubscriptions } from '../../utils/api';
 
 const SubscriptionsScreen = ({ navigation }) => {
-  const [activeSubscriptions, setActiveSubscriptions] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Load subscriptions when screen comes into focus
@@ -24,19 +25,26 @@ const SubscriptionsScreen = ({ navigation }) => {
   );
 
   const loadSubscriptions = async () => {
-    setLoading(true);
-    const subs = await getActiveSubscriptions();
-    setActiveSubscriptions(subs || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const response = await getUserSubscriptions();
+
+      if (response.code === 200) {
+        setSubscriptions(response.subscriptions || []);
+      }
+    } catch (error) {
+      console.error('Error loading subscriptions:', error);
+      Alert.alert('Error', 'Failed to load subscriptions. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChooseSubscription = () => {
-    // Navigate to Home tab
-    navigation.navigate('Home');
+    navigation.navigate('SubscriptionPackages');
   };
 
   const handleAddMore = () => {
-    // Navigate to SubscriptionPackages screen
     navigation.navigate('SubscriptionPackages');
   };
 
@@ -44,6 +52,21 @@ const SubscriptionsScreen = ({ navigation }) => {
     navigation.navigate('ManageSubscription', {
       subscriptionId: subscription.id,
     });
+  };
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'active':
+        return { bg: Colors.primary, text: 'Active' };
+      case 'paused':
+        return { bg: '#FFB020', text: 'Paused' };
+      case 'expired':
+        return { bg: '#9E9E9E', text: 'Expired' };
+      case 'cancelled':
+        return { bg: '#E53935', text: 'Cancelled' };
+      default:
+        return { bg: Colors.textSecondary, text: status };
+    }
   };
 
   // Loading state
@@ -64,7 +87,7 @@ const SubscriptionsScreen = ({ navigation }) => {
   }
 
   // Empty state - no subscriptions
-  if (activeSubscriptions.length === 0) {
+  if (subscriptions.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -109,34 +132,46 @@ const SubscriptionsScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {activeSubscriptions.map((subscription) => (
-          <View key={subscription.id} style={styles.subscriptionCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.packageName}>{subscription.package_title}</Text>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>Active</Text>
-              </View>
-            </View>
+        {subscriptions.map((subscription) => {
+          const statusInfo = getStatusStyle(subscription.status);
 
-            <View style={styles.cardDetails}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Duration:</Text>
-                <Text style={styles.detailValue}>{subscription.duration} Days</Text>
+          return (
+            <View key={subscription.id} style={styles.subscriptionCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.packageName}>
+                  {subscription.subscription_package?.name || 'Subscription'}
+                </Text>
+                <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+                  <Text style={styles.statusText}>{statusInfo.text}</Text>
+                </View>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Days Remaining:</Text>
-                <Text style={styles.detailValue}>{subscription.days_remaining} Days</Text>
-              </View>
-            </View>
 
-            <TouchableOpacity
-              style={styles.manageButton}
-              onPress={() => handleManageSubscription(subscription)}
-            >
-              <Text style={styles.manageButtonText}>Manage Subscription</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+              <View style={styles.cardDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Plan:</Text>
+                  <Text style={styles.detailValue}>
+                    {subscription.subscription_type?.name} ({subscription.subscription_type?.duration_days} Days)
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Meals Remaining:</Text>
+                  <Text style={styles.detailValue}>{subscription.meals_remaining || 0}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Days Remaining:</Text>
+                  <Text style={styles.detailValue}>{subscription.remaining_days || 0} Days</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.manageButton}
+                onPress={() => handleManageSubscription(subscription)}
+              >
+                <Text style={styles.manageButtonText}>Manage Subscription</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
 
         <TouchableOpacity style={styles.addMoreButton} onPress={handleAddMore}>
           <Text style={styles.addMoreText}>+ Add More Subscriptions</Text>
@@ -234,7 +269,6 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   statusBadge: {
-    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,

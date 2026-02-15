@@ -7,15 +7,19 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { verifyOTP, sendOTP } from '../../utils/api';
 
 const OTPVerification = ({ navigation, route }) => {
   const { phoneNumber } = route.params;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [loading, setLoading] = useState(false);
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -47,19 +51,70 @@ const OTPVerification = ({ navigation, route }) => {
     }
   };
 
-  const handleVerifyOTP = () => {
-    const otpCode = otp.join('');
-    if (otpCode.length === 6) {
-      navigation.navigate('CompleteProfile');
+  const handleVerifyOTP = async () => {
+    const enteredOTP = otp.join('');
+    if (enteredOTP.length === 6) {
+      setLoading(true);
+      try {
+        const response = await verifyOTP(phoneNumber, enteredOTP);
+
+        // Backend returns: {code: 200, message: "...", user: {...}, token: "...", onboarding_status: {...}}
+        if (response.code === 200) {
+          const onboardingStatus = response.onboarding_status || {};
+
+          // Check onboarding status flags
+          if (!onboardingStatus.has_completed_profile) {
+            // Navigate to profile completion
+            navigation.navigate('CompleteProfile');
+          } else if (!onboardingStatus.has_completed_preferences) {
+            // Navigate to preferences
+            navigation.navigate('Preferences');
+          } else {
+            // User has completed everything, go to main app
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainApp' }],
+            });
+          }
+        } else {
+          Alert.alert('Error', response.message || 'Invalid OTP');
+        }
+      } catch (error) {
+        console.error('Verify OTP Error:', error);
+        const errorMessage = error.code === 422
+          ? 'Invalid OTP code. Please try again.'
+          : error.message || 'The OTP code you entered is incorrect.';
+        Alert.alert('Invalid OTP', errorMessage);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleResendOTP = () => {
+  const handleResendOTP = async () => {
     if (canResend) {
-      setTimer(60);
-      setCanResend(false);
-      setOtp(['', '', '', '', '', '']);
-      console.log('Resend OTP');
+      try {
+        const response = await sendOTP(phoneNumber);
+        if (response.code === 200) {
+          setTimer(60);
+          setCanResend(false);
+          setOtp(['', '', '', '', '', '']);
+
+          // Log OTP for testing
+          if (response.otp) {
+            console.log('==========================================');
+            console.log('🔐 NEW OTP CODE:', response.otp);
+            console.log('==========================================');
+          }
+
+          Alert.alert('Success', 'OTP has been resent to your phone');
+        } else {
+          Alert.alert('Error', response.message || 'Failed to resend OTP');
+        }
+      } catch (error) {
+        console.error('Resend OTP Error:', error);
+        Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+      }
     }
   };
 
@@ -126,19 +181,23 @@ const OTPVerification = ({ navigation, route }) => {
         </View>
 
         <TouchableOpacity
-          style={[styles.button, !isOTPComplete && styles.buttonDisabled]}
+          style={[styles.button, (!isOTPComplete || loading) && styles.buttonDisabled]}
           onPress={handleVerifyOTP}
-          disabled={!isOTPComplete}
+          disabled={!isOTPComplete || loading}
         >
           <LinearGradient
-            colors={isOTPComplete ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
+            colors={isOTPComplete && !loading ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
             style={styles.buttonGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={[styles.buttonText, !isOTPComplete && styles.buttonTextDisabled]}>
-              Verify & Continue
-            </Text>
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={[styles.buttonText, !isOTPComplete && styles.buttonTextDisabled]}>
+                Verify & Continue
+              </Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>

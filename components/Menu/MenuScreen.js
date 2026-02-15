@@ -12,6 +12,17 @@ import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { useMenu } from '../../context/MenuContext';
 import MenuItem from './MenuItem';
 
+// Category emoji icons mapping
+const categoryIcons = {
+  chicken: '🍗',
+  beef: '🥩',
+  salmon: '🐟',
+  sandwich: '🥪',
+  salad: '🥗',
+  vegetarian: '🥬',
+  beverage: '🥤',
+};
+
 const MenuScreen = ({ navigation }) => {
   const {
     menuItems,
@@ -52,26 +63,33 @@ const MenuScreen = ({ navigation }) => {
 
       {/* Category Tabs */}
       <View style={styles.categoryContainer}>
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryTab,
-              selectedCategory === category.id && styles.categoryTabActive,
-            ]}
-            onPress={() => handleCategoryPress(category.id)}
-          >
-            <Text style={styles.categoryEmoji}>{category.icon}</Text>
-            <Text
+        <FlatList
+          horizontal
+          data={categories}
+          keyExtractor={(category) => category.value}
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item: category }) => (
+            <TouchableOpacity
               style={[
-                styles.categoryText,
-                selectedCategory === category.id && styles.categoryTextActive,
+                styles.categoryTab,
+                selectedCategory === category.value && styles.categoryTabActive,
               ]}
+              onPress={() => handleCategoryPress(category.value)}
             >
-              {category.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={styles.categoryEmoji}>
+                {categoryIcons[category.value] || '🍽️'}
+              </Text>
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === category.value && styles.categoryTextActive,
+                ]}
+              >
+                {category.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
       </View>
 
       {/* Menu Items */}
@@ -150,10 +168,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   categoryContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    gap: Spacing.sm,
   },
   categoryTab: {
     flexDirection: 'row',
@@ -164,6 +179,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.inputBackground,
     borderWidth: 2,
     borderColor: Colors.inputBackground,
+    marginLeft: Spacing.sm,
   },
   categoryTabActive: {
     backgroundColor: '#E8F5E9',

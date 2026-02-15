@@ -9,22 +9,19 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { saveActiveSubscription } from '../../utils/storage';
 
 const OrderConfirmationScreen = ({ route, navigation }) => {
   const {
+    subscription,
     package: selectedPackage,
+    subscriptionType,
     duration,
     price,
     address,
     paymentMethod,
-    deliveryPreferences,
   } = route.params;
 
   const scaleAnim = new Animated.Value(0);
-
-  // Generate order ID
-  const orderId = `LS${Date.now().toString().slice(-8)}`;
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -33,41 +30,22 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
       tension: 40,
       useNativeDriver: true,
     }).start();
-
-    // Save subscription to AsyncStorage
-    const saveSubscription = async () => {
-      const subscription = {
-        id: orderId,
-        package_title: selectedPackage.package_title,
-        package_id: selectedPackage.id,
-        duration,
-        price,
-        meals: selectedPackage.meals,
-        description: selectedPackage.description,
-        delivery_address: address,
-        payment_method: paymentMethod,
-        delivery_preferences: deliveryPreferences,
-        start_date: new Date().toISOString(),
-        days_remaining: duration,
-        status: 'active',
-        created_at: new Date().toISOString(),
-      };
-
-      const saved = await saveActiveSubscription(subscription);
-      if (saved) {
-        console.log('Subscription saved successfully:', orderId);
-      }
-    };
-
-    saveSubscription();
   }, []);
 
-  const getMealsSummary = (meals) => {
-    return meals.map((m) => `${m.qty} ${m.meal_name}`).join(', ');
+  // Format contents object into readable summary
+  const getContentsSummary = (contents) => {
+    if (!contents) return '';
+    return Object.entries(contents)
+      .map(([key, qty]) => {
+        const label = key
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        return `${qty} ${label}`;
+      })
+      .join(', ');
   };
 
   const handleBackToHome = () => {
-    // Navigate back to Home and reset stack
     navigation.reset({
       index: 0,
       routes: [{ name: 'MainApp' }],
@@ -75,7 +53,6 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
   };
 
   const handleViewSubscription = () => {
-    // Navigate to Subscriptions tab
     navigation.reset({
       index: 0,
       routes: [
@@ -90,17 +67,18 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
     });
   };
 
-  const estimatedDelivery = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString(
-    'en-US',
-    {
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
-    }
-  );
+    });
+  };
 
   const tax = (price * 0.15).toFixed(2);
-  const total = (parseFloat(price) + parseFloat(tax)).toFixed(2);
+  const total = subscription?.total_amount || (parseFloat(price) + parseFloat(tax)).toFixed(2);
 
   return (
     <View style={styles.container}>
@@ -124,8 +102,8 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
         {/* Order Details */}
         <View style={styles.section}>
           <View style={styles.orderIdContainer}>
-            <Text style={styles.orderIdLabel}>Order ID</Text>
-            <Text style={styles.orderId}>{orderId}</Text>
+            <Text style={styles.orderIdLabel}>Subscription ID</Text>
+            <Text style={styles.orderId}>#{subscription?.id || '-'}</Text>
           </View>
         </View>
 
@@ -135,33 +113,57 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
           <View style={styles.detailsCard}>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Package</Text>
-              <Text style={styles.detailValue}>{selectedPackage.package_title}</Text>
+              <Text style={styles.detailValue}>
+                {subscription?.subscription_package?.name || selectedPackage?.name || '-'}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Plan</Text>
+              <Text style={styles.detailValue}>
+                {subscription?.subscription_type?.name || subscriptionType?.name || '-'}
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Duration</Text>
-              <Text style={styles.detailValue}>{duration} Days</Text>
+              <Text style={styles.detailValue}>
+                {subscription?.subscription_type?.duration_days || duration} Days
+              </Text>
+            </View>
+            {selectedPackage?.contents && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Meals</Text>
+                <Text style={styles.detailValue}>
+                  {getContentsSummary(selectedPackage.contents)}
+                </Text>
+              </View>
+            )}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Start Date</Text>
+              <Text style={styles.detailValue}>
+                {formatDate(subscription?.start_date)}
+              </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Meals</Text>
-              <Text style={styles.detailValue}>{getMealsSummary(selectedPackage.meals)}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>First Delivery</Text>
-              <Text style={styles.detailValue}>{estimatedDelivery}</Text>
+              <Text style={styles.detailLabel}>End Date</Text>
+              <Text style={styles.detailValue}>
+                {formatDate(subscription?.end_date)}
+              </Text>
             </View>
           </View>
         </View>
 
         {/* Delivery Address */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
-          <View style={styles.addressCard}>
-            <Text style={styles.addressName}>{address.name}</Text>
-            <Text style={styles.addressText}>{address.street}</Text>
-            <Text style={styles.addressText}>{address.city}</Text>
-            <Text style={styles.addressPhone}>{address.phone}</Text>
+        {subscription?.delivery_address && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <View style={styles.addressCard}>
+              <Text style={styles.addressText}>
+                {subscription.delivery_address.street_address}, {subscription.delivery_address.district}
+              </Text>
+              <Text style={styles.addressText}>{subscription.delivery_address.city}</Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Payment Summary */}
         <View style={styles.section}>
@@ -169,16 +171,16 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
           <View style={styles.paymentCard}>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Package Price</Text>
-              <Text style={styles.paymentValue}>{price} SAR</Text>
+              <Text style={styles.paymentValue}>
+                {subscription?.subscription_package?.price || price} SAR
+              </Text>
             </View>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Delivery Fee</Text>
-              <Text style={styles.paymentFree}>Free</Text>
-            </View>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Tax (15%)</Text>
-              <Text style={styles.paymentValue}>{tax} SAR</Text>
-            </View>
+            {subscription?.delivery_charge > 0 && (
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Delivery Fee</Text>
+                <Text style={styles.paymentValue}>{subscription.delivery_charge} SAR</Text>
+              </View>
+            )}
             <View style={styles.divider} />
             <View style={styles.paymentRow}>
               <Text style={styles.totalLabel}>Total Paid</Text>
@@ -187,9 +189,9 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
             <View style={styles.paymentMethodRow}>
               <Text style={styles.paidViaLabel}>Paid via</Text>
               <Text style={styles.paidViaValue}>
-                {paymentMethod.type === 'card'
-                  ? `Card •••• ${paymentMethod.last4}`
-                  : 'Apple Pay'}
+                {subscription?.payment_method === 'card'
+                  ? 'Credit Card'
+                  : subscription?.payment_method || paymentMethod?.type}
               </Text>
             </View>
           </View>
@@ -202,13 +204,13 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
             <View style={styles.stepRow}>
               <Text style={styles.stepIcon}>📦</Text>
               <Text style={styles.stepText}>
-                Your first delivery will arrive on {estimatedDelivery}
+                Your first delivery will arrive on {formatDate(subscription?.start_date)}
               </Text>
             </View>
             <View style={styles.stepRow}>
-              <Text style={styles.stepIcon}>📧</Text>
+              <Text style={styles.stepIcon}>🍽️</Text>
               <Text style={styles.stepText}>
-                You'll receive an email with order details and tracking
+                Head to "Select Meals" to choose your daily meals before 8:00 PM
               </Text>
             </View>
             <View style={styles.stepRow}>
@@ -346,23 +348,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  addressName: {
-    ...Fonts.bold,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
   addressText: {
     ...Fonts.regular,
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 2,
-  },
-  addressPhone: {
-    ...Fonts.medium,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    marginTop: Spacing.xs,
   },
   paymentCard: {
     backgroundColor: Colors.white,
@@ -386,11 +376,6 @@ const styles = StyleSheet.create({
     ...Fonts.semiBold,
     fontSize: 14,
     color: Colors.textPrimary,
-  },
-  paymentFree: {
-    ...Fonts.semiBold,
-    fontSize: 14,
-    color: Colors.primary,
   },
   divider: {
     height: 1,

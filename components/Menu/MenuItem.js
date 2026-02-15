@@ -5,26 +5,19 @@ import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 const { width } = Dimensions.get('window');
 const itemWidth = (width - Spacing.md * 4) / 2;
 
+// Placeholder image when image_url is null
+const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/200x120/E8F5E9/00B14F?text=Let%27Salad';
+
 const MenuItem = ({ item, onPress }) => {
   return (
     <TouchableOpacity
-      style={[styles.container, !item.available && styles.unavailable]}
+      style={styles.container}
       onPress={() => onPress(item)}
-      disabled={!item.available}
     >
-      <Image source={{ uri: item.image }} style={styles.image} />
-
-      {item.popular && (
-        <View style={styles.popularBadge}>
-          <Text style={styles.popularText}>⭐</Text>
-        </View>
-      )}
-
-      {!item.available && (
-        <View style={styles.unavailableBadge}>
-          <Text style={styles.unavailableText}>Out of Stock</Text>
-        </View>
-      )}
+      <Image
+        source={{ uri: item.image_url || PLACEHOLDER_IMAGE }}
+        style={styles.image}
+      />
 
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={2}>
@@ -48,41 +41,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  unavailable: {
-    opacity: 0.5,
-  },
   image: {
     width: '100%',
     height: 120,
     backgroundColor: Colors.inputBackground,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  popularText: {
-    fontSize: 16,
-  },
-  unavailableBadge: {
-    position: 'absolute',
-    top: Spacing.sm,
-    left: Spacing.sm,
-    backgroundColor: Colors.error,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  unavailableText: {
-    ...Fonts.semiBold,
-    fontSize: 10,
-    color: Colors.white,
   },
   content: {
     padding: Spacing.sm,

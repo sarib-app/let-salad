@@ -5,13 +5,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { saveUserPreferences } from '../../utils/storage';
+import { savePreferences } from '../../utils/api';
 
 const Preferences = ({ navigation, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState({
     subscribingFor: '',
     gender: '',
@@ -123,11 +127,54 @@ const Preferences = ({ navigation, onComplete }) => {
       setCurrentStep(currentStep + 1);
     } else {
       console.log('Preferences completed:', preferences);
-      // Save preferences to AsyncStorage
-      await saveUserPreferences(preferences);
-      // Call onComplete if provided (for HomeScreen)
-      if (onComplete) {
-        onComplete();
+      setLoading(true);
+
+      try {
+        // Backend expects: {subscribing_for, gender, has_allergies, goal, meal_type}
+        // has_allergies must be string "yes" or "no", not boolean
+        // meal_type uses underscore format like "low_carb"
+        const mealTypeMap = {
+          'lowcarb': 'low_carb',
+          'highprotein': 'high_protein',
+          'balanced': 'balanced',
+        };
+
+        const preferencesData = {
+          subscribing_for: preferences.subscribingFor,
+          gender: preferences.gender,
+          has_allergies: preferences.hasAllergies, // Send as string "yes" or "no"
+          goal: preferences.goal,
+          meal_type: mealTypeMap[preferences.mealType] || preferences.mealType,
+        };
+
+        const response = await savePreferences(preferencesData);
+
+        // Backend returns: {code: 200, message: "...", preferences: {...}}
+        if (response.code === 200) {
+          // Also save locally
+          await saveUserPreferences(preferences);
+
+          // Call onComplete if provided (for HomeScreen)
+          if (onComplete) {
+            onComplete();
+          } else {
+            // Navigate to MainApp after onboarding
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainApp' }],
+            });
+          }
+        } else {
+          Alert.alert('Error', response.message || 'Failed to save preferences');
+        }
+      } catch (error) {
+        console.error('Save Preferences Error:', error);
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to save preferences. Please try again.'
+        );
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -324,19 +371,23 @@ const Preferences = ({ navigation, onComplete }) => {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.button, !canProceed() && styles.buttonDisabled]}
+          style={[styles.button, (!canProceed() || loading) && styles.buttonDisabled]}
           onPress={handleNext}
-          disabled={!canProceed()}
+          disabled={!canProceed() || loading}
         >
           <LinearGradient
-            colors={canProceed() ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
+            colors={canProceed() && !loading ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
             style={styles.buttonGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={[styles.buttonText, !canProceed() && styles.buttonTextDisabled]}>
-              {currentStep === 5 ? 'Complete' : 'Continue'}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={[styles.buttonText, !canProceed() && styles.buttonTextDisabled]}>
+                {currentStep === 5 ? 'Complete' : 'Continue'}
+              </Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
