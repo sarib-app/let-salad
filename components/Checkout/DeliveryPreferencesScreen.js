@@ -116,6 +116,7 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
 
     navigation.navigate('Checkout', {
       package: selectedPackage,
+      subscriptionType,
       duration,
       deliveryPreferences,
     });

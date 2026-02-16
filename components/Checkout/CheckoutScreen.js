@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { purchaseSubscription } from '../../utils/api';
+import { purchaseSubscription, validateAddressCoordinates } from '../../utils/api';
 
 const CheckoutScreen = ({ route, navigation }) => {
   const { package: selectedPackage, subscriptionType, duration, deliveryPreferences } = route.params;
@@ -26,6 +26,54 @@ const CheckoutScreen = ({ route, navigation }) => {
     type: 'card',
     last4: '4242',
   });
+
+  // Delivery zone validation state
+  const [isInDeliveryZone, setIsInDeliveryZone] = useState(null);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [pricingZone, setPricingZone] = useState(null);
+  const [validatingZone, setValidatingZone] = useState(false);
+
+  // Validate address coordinates when address changes
+  const validateAddress = useCallback(async (address) => {
+    if (!address?.latitude || !address?.longitude) {
+      setIsInDeliveryZone(null);
+      setDeliveryCharge(0);
+      setPricingZone(null);
+      return;
+    }
+
+    try {
+      setValidatingZone(true);
+      const response = await validateAddressCoordinates(
+        parseFloat(address.latitude),
+        parseFloat(address.longitude)
+      );
+
+      if (response.code === 200) {
+        setIsInDeliveryZone(response.is_in_delivery_zone);
+        if (response.is_in_delivery_zone && response.pricing_zone) {
+          setDeliveryCharge(response.pricing_zone.price || 0);
+          setPricingZone(response.pricing_zone);
+        } else {
+          setDeliveryCharge(0);
+          setPricingZone(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error validating address:', error);
+      setIsInDeliveryZone(null);
+      setDeliveryCharge(0);
+      setPricingZone(null);
+    } finally {
+      setValidatingZone(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (deliveryAddress) {
+      validateAddress(deliveryAddress);
+    }
+  }, [deliveryAddress, validateAddress]);
 
   // Format contents object into readable summary
   const getContentsSummary = (contents) => {
@@ -57,6 +105,13 @@ const CheckoutScreen = ({ route, navigation }) => {
   const handlePlaceOrder = async () => {
     if (!deliveryAddress?.id) {
       Alert.alert('Address Required', 'Please select a delivery address before placing your order.');
+      return;
+    }
+    if (isInDeliveryZone === false) {
+      Alert.alert(
+        'Out of Delivery Zone',
+        'This area is out of our delivery zone. Please select a different address. Thank you!'
+      );
       return;
     }
     setSubmitting(true);
@@ -92,9 +147,10 @@ const CheckoutScreen = ({ route, navigation }) => {
     }
   };
 
-  const deliveryFee = 0; // Free delivery
+  const deliveryFee = deliveryCharge;
   const tax = (price * 0.15).toFixed(2);
-  const total = (parseFloat(price) + parseFloat(tax)).toFixed(2);
+  const total = (parseFloat(price) + parseFloat(tax) + parseFloat(deliveryFee)).toFixed(2);
+  const canPlaceOrder = deliveryAddress?.id && isInDeliveryZone === true && !validatingZone;
 
   return (
     <View style={styles.container}>
@@ -133,7 +189,10 @@ const CheckoutScreen = ({ route, navigation }) => {
               <Text style={styles.editButton}>Edit</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.infoCard}>
+          <View style={[
+            styles.infoCard,
+            isInDeliveryZone === false && styles.infoCardError,
+          ]}>
             {deliveryAddress ? (
               <>
                 <Text style={styles.addressName}>
@@ -143,6 +202,28 @@ const CheckoutScreen = ({ route, navigation }) => {
                 <Text style={styles.addressText}>
                   {[deliveryAddress.district, deliveryAddress.city].filter(Boolean).join(', ')}
                 </Text>
+                {validatingZone && (
+                  <View style={styles.zoneValidationRow}>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <Text style={styles.zoneValidatingText}>Checking delivery zone...</Text>
+                  </View>
+                )}
+                {!validatingZone && isInDeliveryZone === true && pricingZone && (
+                  <View style={styles.zoneValidationRow}>
+                    <Text style={styles.zoneSuccessIcon}>✓</Text>
+                    <Text style={styles.zoneSuccessText}>
+                      In delivery zone ({pricingZone.name})
+                    </Text>
+                  </View>
+                )}
+                {!validatingZone && isInDeliveryZone === false && (
+                  <View style={styles.zoneErrorBanner}>
+                    <Text style={styles.zoneErrorIcon}>⚠️</Text>
+                    <Text style={styles.zoneErrorText}>
+                      This area is out of our delivery zone. Please select a different address.
+                    </Text>
+                  </View>
+                )}
               </>
             ) : (
               <Text style={styles.addressText}>No address selected</Text>
@@ -181,7 +262,13 @@ const CheckoutScreen = ({ route, navigation }) => {
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Delivery Fee</Text>
-              <Text style={styles.priceFree}>Free</Text>
+              {validatingZone ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : deliveryFee > 0 ? (
+                <Text style={styles.priceValue}>{deliveryFee} SAR</Text>
+              ) : (
+                <Text style={styles.priceFree}>Free</Text>
+              )}
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Tax (15%)</Text>
@@ -200,26 +287,37 @@ const CheckoutScreen = ({ route, navigation }) => {
 
       {/* Fixed Bottom Button */}
       <View style={styles.bottomContainer}>
+        {isInDeliveryZone === false && (
+          <View style={styles.bottomWarning}>
+            <Text style={styles.bottomWarningText}>
+              ⚠️ Selected address is out of delivery zone
+            </Text>
+          </View>
+        )}
         <View style={styles.bottomContent}>
           <View>
             <Text style={styles.bottomLabel}>Total Amount</Text>
             <Text style={styles.bottomPrice}>{total} SAR</Text>
           </View>
           <TouchableOpacity
-            style={styles.placeOrderButton}
+            style={[styles.placeOrderButton, !canPlaceOrder && styles.placeOrderButtonDisabled]}
             onPress={handlePlaceOrder}
-            disabled={submitting}
+            disabled={submitting || !canPlaceOrder}
           >
             <LinearGradient
-              colors={['#00B14F', '#00D95F']}
+              colors={canPlaceOrder && !submitting ? ['#00B14F', '#00D95F'] : ['#CCCCCC', '#CCCCCC']}
               style={styles.placeOrderGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
               {submitting ? (
                 <ActivityIndicator color={Colors.white} />
+              ) : validatingZone ? (
+                <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.placeOrderText}>Place Order</Text>
+                <Text style={[styles.placeOrderText, !canPlaceOrder && styles.placeOrderTextDisabled]}>
+                  Place Order
+                </Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -306,6 +404,53 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  infoCardError: {
+    borderColor: Colors.error,
+    borderWidth: 2,
+    backgroundColor: '#FFF5F5',
+  },
+  zoneValidationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: Spacing.xs,
+  },
+  zoneValidatingText: {
+    ...Fonts.medium,
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  zoneSuccessIcon: {
+    ...Fonts.bold,
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  zoneSuccessText: {
+    ...Fonts.medium,
+    fontSize: 13,
+    color: Colors.primary,
+  },
+  zoneErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#FFCDD2',
+    gap: Spacing.xs,
+  },
+  zoneErrorIcon: {
+    fontSize: 16,
+  },
+  zoneErrorText: {
+    ...Fonts.medium,
+    fontSize: 13,
+    color: Colors.error,
+    flex: 1,
   },
   addressName: {
     ...Fonts.bold,
@@ -418,11 +563,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.textPrimary,
   },
+  bottomWarning: {
+    backgroundColor: '#FFF4E5',
+    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    alignItems: 'center',
+  },
+  bottomWarningText: {
+    ...Fonts.medium,
+    fontSize: 13,
+    color: '#E65100',
+  },
   placeOrderButton: {
     height: 50,
     borderRadius: BorderRadius.full,
     overflow: 'hidden',
     minWidth: 160,
+  },
+  placeOrderButtonDisabled: {
+    opacity: 0.7,
+  },
+  placeOrderTextDisabled: {
+    color: Colors.white,
   },
   placeOrderGradient: {
     flex: 1,

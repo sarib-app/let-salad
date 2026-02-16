@@ -256,6 +256,26 @@ export const deleteAddress = async (id) => {
   }
 };
 
+// ==================== ADDRESS VALIDATION APIs ====================
+
+/**
+ * Validate if address coordinates are within a delivery zone
+ * @param {number} latitude - Address latitude
+ * @param {number} longitude - Address longitude
+ * @returns {Promise<{code: number, is_in_delivery_zone: boolean, pricing_zone?: {id: number, name: string, price: number}}>}
+ */
+export const validateAddressCoordinates = async (latitude, longitude) => {
+  try {
+    const response = await api.post('/mobile/validateAddressCoordinates', {
+      latitude,
+      longitude,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 // ==================== MENU APIs ====================
 
 /**

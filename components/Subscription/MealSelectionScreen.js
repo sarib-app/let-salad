@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan } from '../../utils/api';
+import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan, getMenu } from '../../utils/api';
 
 const MealSelectionScreen = ({ route, navigation }) => {
   const { subscription, onMealsSelected } = route.params;
@@ -33,28 +33,34 @@ const MealSelectionScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
 
-      // Load available meals/days and subscription meal plans in parallel
-      const [availableResponse, mealPlansResponse] = await Promise.all([
-        getAvailableMeals(),
+      // Load available meals/days, menu items, and subscription meal plans in parallel
+      const [availableResponse, menuResponse, mealPlansResponse] = await Promise.all([
+        getAvailableMeals().catch(() => ({ code: 0 })),
+        getMenu(),
         getSubscriptionMealPlans(subscription.id),
       ]);
 
       // Process available meals - group by category
-      if (availableResponse.code === 200) {
-        // Store available days
-        setAvailableDays(availableResponse.days || []);
+      // First try from getAvailableMeals, fall back to getMenu
+      let mealsToGroup = [];
 
-        // Group meals by category
-        const groupedMenus = {};
-        (availableResponse.meals || []).forEach((meal) => {
-          const category = meal.category.toLowerCase();
-          if (!groupedMenus[category]) {
-            groupedMenus[category] = [];
-          }
-          groupedMenus[category].push(meal);
-        });
-        setAvailableMenus(groupedMenus);
+      if (availableResponse.code === 200 && availableResponse.meals && availableResponse.meals.length > 0) {
+        setAvailableDays(availableResponse.days || []);
+        mealsToGroup = availableResponse.meals;
+      } else if (menuResponse.code === 200 && menuResponse.meals && menuResponse.meals.length > 0) {
+        mealsToGroup = menuResponse.meals;
       }
+
+      // Group meals by category
+      const groupedMenus = {};
+      mealsToGroup.forEach((meal) => {
+        const category = meal.category.toLowerCase();
+        if (!groupedMenus[category]) {
+          groupedMenus[category] = [];
+        }
+        groupedMenus[category].push(meal);
+      });
+      setAvailableMenus(groupedMenus);
 
       // Process subscription meal plans from backend
       if (mealPlansResponse.code === 200) {
@@ -117,12 +123,37 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const getMealRequirements = () => {
     // Get meal requirements from subscription
     const requirements = {};
-    if (subscription.meals) {
+
+    // Try subscription.meals array first (if backend provides it)
+    if (subscription.meals && subscription.meals.length > 0) {
       subscription.meals.forEach((meal) => {
         const mealType = meal.meal_name.toLowerCase();
         requirements[mealType] = meal.qty;
       });
+      return requirements;
     }
+
+    // Fall back to subscription_package.contents object
+    // e.g. { chicken_meals: 24, salad: 10 } → { chicken: 24, salad: 10 }
+    const contents = subscription.subscription_package?.contents;
+    if (contents && typeof contents === 'object') {
+      Object.entries(contents).forEach(([key, qty]) => {
+        // Strip common suffixes like "_meals" to match menu category
+        const category = key.replace(/_meals$/i, '').toLowerCase();
+        requirements[category] = qty;
+      });
+      return requirements;
+    }
+
+    // If still no requirements, derive from available menu categories
+    // so at least the user can see and pick meals
+    const menuCategories = Object.keys(availableMenus);
+    if (menuCategories.length > 0) {
+      menuCategories.forEach((cat) => {
+        requirements[cat] = 1; // default 1 per category
+      });
+    }
+
     return requirements;
   };
 
@@ -398,11 +429,19 @@ const MealSelectionScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        {/* Available Menus (only if window is open) */}
-        {canSelectForDate && (
+        {/* Available Menus */}
+        {canSelectForDate && Object.keys(availableMenus).length > 0 && (
           <>
             {Object.entries(requirements).map(([category, qty]) => {
-              const categoryMeals = availableMenus[category] || [];
+              // Match category to available menus - try exact match, then partial
+              let categoryMeals = availableMenus[category] || [];
+              if (categoryMeals.length === 0) {
+                // Try partial match (e.g. "chicken" matches "chicken_meals" category key)
+                const matchKey = Object.keys(availableMenus).find(
+                  (k) => k.includes(category) || category.includes(k)
+                );
+                if (matchKey) categoryMeals = availableMenus[matchKey];
+              }
               if (qty <= 0 || categoryMeals.length === 0) return null;
 
               const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
@@ -417,6 +456,47 @@ const MealSelectionScreen = ({ route, navigation }) => {
                   </Text>
                   <View style={styles.menuGrid}>
                     {categoryMeals.map((meal) => {
+                      const isSelected = selectedMeals.some((m) => m.id === meal.id);
+                      return (
+                        <TouchableOpacity
+                          key={meal.id}
+                          style={[styles.mealCard, isSelected && styles.mealCardSelected]}
+                          onPress={() => handleSelectMeal(meal)}
+                        >
+                          <Text style={[styles.mealName, isSelected && styles.mealNameSelected]}>
+                            {meal.name}
+                          </Text>
+                          <Text style={styles.mealCalories}>{meal.calories} cal</Text>
+                          {isSelected && (
+                            <View style={styles.selectedBadge}>
+                              <Text style={styles.selectedBadgeText}>✓</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })}
+
+            {/* Fallback: if no requirements matched, show all available meals */}
+            {Object.entries(requirements).every(([category]) => {
+              let categoryMeals = availableMenus[category] || [];
+              if (categoryMeals.length === 0) {
+                const matchKey = Object.keys(availableMenus).find(
+                  (k) => k.includes(category) || category.includes(k)
+                );
+                if (matchKey) categoryMeals = availableMenus[matchKey];
+              }
+              return categoryMeals.length === 0;
+            }) && Object.entries(availableMenus).map(([category, meals]) => {
+              const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
+              return (
+                <View key={category} style={styles.section}>
+                  <Text style={styles.sectionTitle}>{categoryLabel}</Text>
+                  <View style={styles.menuGrid}>
+                    {meals.map((meal) => {
                       const isSelected = selectedMeals.some((m) => m.id === meal.id);
                       return (
                         <TouchableOpacity
