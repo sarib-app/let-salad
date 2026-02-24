@@ -8,24 +8,17 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { purchaseSubscription, validateAddressCoordinates } from '../../utils/api';
+import { validateAddressCoordinates } from '../../utils/api';
 
 const CheckoutScreen = ({ route, navigation }) => {
   const { package: selectedPackage, subscriptionType, duration, deliveryPreferences } = route.params;
   const price = selectedPackage.price;
-  const [submitting, setSubmitting] = useState(false);
 
   // Use delivery preferences from previous screen
   const [deliveryAddress, setDeliveryAddress] = useState(
     deliveryPreferences?.address || null
   );
-
-  const [paymentMethod, setPaymentMethod] = useState({
-    type: 'card',
-    last4: '4242',
-  });
 
   // Delivery zone validation state
   const [isInDeliveryZone, setIsInDeliveryZone] = useState(null);
@@ -95,62 +88,45 @@ const CheckoutScreen = ({ route, navigation }) => {
     });
   };
 
-  const handleEditPayment = () => {
-    navigation.navigate('PaymentMethod', {
-      currentMethod: paymentMethod,
-      onMethodSelect: (method) => setPaymentMethod(method),
-    });
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!deliveryAddress?.id) {
-      Alert.alert('Address Required', 'Please select a delivery address before placing your order.');
-      return;
-    }
-    if (isInDeliveryZone === false) {
-      Alert.alert(
-        'Out of Delivery Zone',
-        'This area is out of our delivery zone. Please select a different address. Thank you!'
-      );
-      return;
-    }
-    setSubmitting(true);
-
-    try {
-      const response = await purchaseSubscription({
-        subscription_type_id: subscriptionType?.id,
-        subscription_package_id: selectedPackage.id,
-        delivery_address_id: deliveryAddress.id,
-        payment_method: paymentMethod.type,
-        payment_reference: `PAY-${Date.now()}`,
-      });
-
-      if (response.code === 201 || response.code === 200) {
-        navigation.navigate('OrderConfirmation', {
-          subscription: response.subscription,
-          package: selectedPackage,
-          subscriptionType,
-          duration,
-          price,
-          address: deliveryAddress,
-          paymentMethod,
-          deliveryPreferences,
-        });
-      } else {
-        Alert.alert('Error', response.message || 'Failed to place order. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error placing order:', error);
-      Alert.alert('Error', error.message || 'Failed to place order. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const deliveryFee = deliveryCharge;
   const tax = (price * 0.15).toFixed(2);
   const total = (parseFloat(price) + parseFloat(tax) + parseFloat(deliveryFee)).toFixed(2);
   const canPlaceOrder = deliveryAddress?.id && isInDeliveryZone === true && !validatingZone;
+
+  // Amount in Halalas for Moyasar (1 SAR = 100 Halalas)
+  const amountInHalalas = Math.round(parseFloat(total) * 100);
+
+  const handlePayWithCard = () => {
+    if (!canPlaceOrder) {
+      if (!deliveryAddress?.id) {
+        Alert.alert('Address Required', 'Please select a delivery address before proceeding.');
+      } else if (isInDeliveryZone === false) {
+        Alert.alert('Out of Delivery Zone', 'This area is out of our delivery zone. Please select a different address.');
+      }
+      return;
+    }
+    navigation.navigate('VisaPayment', {
+      amount: amountInHalalas,
+      description: `LetSalad - ${selectedPackage.name}`,
+      metadata: {
+        package_id: selectedPackage.id?.toString(),
+        subscription_type_id: subscriptionType?.id?.toString(),
+      },
+      subscriptionData: {
+        subscription_type_id: subscriptionType?.id,
+        subscription_package_id: selectedPackage.id,
+        delivery_address_id: deliveryAddress.id,
+      },
+      orderConfirmationData: {
+        package: selectedPackage,
+        subscriptionType,
+        duration,
+        price,
+        address: deliveryAddress,
+        deliveryPreferences,
+      },
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -231,25 +207,18 @@ const CheckoutScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Payment Method */}
+        {/* Payment Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Payment Method</Text>
-            <TouchableOpacity onPress={handleEditPayment}>
-              <Text style={styles.editButton}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.infoCard}>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentIcon}>💳</Text>
-              <View style={styles.paymentDetails}>
-                <Text style={styles.paymentType}>
-                  {paymentMethod.type === 'card' ? 'Credit Card' : 'Apple Pay'}
-                </Text>
-                <Text style={styles.paymentInfo}>•••• {paymentMethod.last4}</Text>
-              </View>
-            </View>
-          </View>
+          <Text style={styles.sectionTitle}>Pay Now</Text>
+
+          {/* Pay with Card Button */}
+          <TouchableOpacity
+            style={[styles.cardPayButton, !canPlaceOrder && styles.payButtonDisabled]}
+            onPress={handlePayWithCard}
+            disabled={!canPlaceOrder}
+          >
+            <Text style={styles.cardPayText}>Pay with Card</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Price Breakdown */}
@@ -285,44 +254,16 @@ const CheckoutScreen = ({ route, navigation }) => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Fixed Bottom Button */}
-      <View style={styles.bottomContainer}>
-        {isInDeliveryZone === false && (
+      {/* Bottom Warning for out-of-zone */}
+      {isInDeliveryZone === false && (
+        <View style={styles.bottomContainer}>
           <View style={styles.bottomWarning}>
             <Text style={styles.bottomWarningText}>
-              ⚠️ Selected address is out of delivery zone
+              Selected address is out of delivery zone
             </Text>
           </View>
-        )}
-        <View style={styles.bottomContent}>
-          <View>
-            <Text style={styles.bottomLabel}>Total Amount</Text>
-            <Text style={styles.bottomPrice}>{total} SAR</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.placeOrderButton, !canPlaceOrder && styles.placeOrderButtonDisabled]}
-            onPress={handlePlaceOrder}
-            disabled={submitting || !canPlaceOrder}
-          >
-            <LinearGradient
-              colors={canPlaceOrder && !submitting ? ['#00B14F', '#00D95F'] : ['#CCCCCC', '#CCCCCC']}
-              style={styles.placeOrderGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              {submitting ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : validatingZone ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={[styles.placeOrderText, !canPlaceOrder && styles.placeOrderTextDisabled]}>
-                  Place Order
-                </Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
         </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -470,27 +411,20 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginTop: Spacing.xs,
   },
-  paymentRow: {
-    flexDirection: 'row',
+  cardPayButton: {
+    backgroundColor: '#1A1F71',
+    borderRadius: BorderRadius.lg,
+    height: 50,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  paymentIcon: {
-    fontSize: 28,
-    marginRight: Spacing.md,
+  cardPayText: {
+    ...Fonts.semiBold,
+    fontSize: 16,
+    color: '#FFFFFF',
   },
-  paymentDetails: {
-    flex: 1,
-  },
-  paymentType: {
-    ...Fonts.bold,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  paymentInfo: {
-    ...Fonts.regular,
-    fontSize: 14,
-    color: Colors.textSecondary,
+  payButtonDisabled: {
+    opacity: 0.5,
   },
   priceCard: {
     backgroundColor: Colors.white,
@@ -547,22 +481,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingBottom: Spacing.xl,
   },
-  bottomContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bottomLabel: {
-    ...Fonts.regular,
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  bottomPrice: {
-    ...Fonts.bold,
-    fontSize: 18,
-    color: Colors.textPrimary,
-  },
   bottomWarning: {
     backgroundColor: '#FFF4E5',
     borderRadius: BorderRadius.sm,
@@ -575,29 +493,6 @@ const styles = StyleSheet.create({
     ...Fonts.medium,
     fontSize: 13,
     color: '#E65100',
-  },
-  placeOrderButton: {
-    height: 50,
-    borderRadius: BorderRadius.full,
-    overflow: 'hidden',
-    minWidth: 160,
-  },
-  placeOrderButtonDisabled: {
-    opacity: 0.7,
-  },
-  placeOrderTextDisabled: {
-    color: Colors.white,
-  },
-  placeOrderGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  placeOrderText: {
-    ...Fonts.bold,
-    fontSize: 15,
-    color: Colors.white,
   },
 });
 

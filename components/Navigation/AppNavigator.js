@@ -11,8 +11,11 @@ import CheckoutScreen from '../Checkout/CheckoutScreen';
 import AddressSelectionScreen from '../Checkout/AddressSelectionScreen';
 import PaymentMethodScreen from '../Checkout/PaymentMethodScreen';
 import OrderConfirmationScreen from '../Checkout/OrderConfirmationScreen';
+import VisaPaymentScreen from '../Checkout/VisaPaymentScreen';
 import AddressManagementScreen from '../Address/AddressManagementScreen';
 import AddEditAddressScreen from '../Address/AddEditAddressScreen';
+import EditProfile from '../User/EditProfile';
+import ChangePassword from '../User/ChangePassword';
 
 const Stack = createNativeStackNavigator();
 
@@ -91,6 +94,15 @@ const AppNavigator = () => {
         }}
       />
       <Stack.Screen
+        name="VisaPayment"
+        component={VisaPaymentScreen}
+        options={{
+          headerShown: true,
+          headerTitle: 'Pay with Card',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
         name="OrderConfirmation"
         component={OrderConfirmationScreen}
         options={{
@@ -114,6 +126,24 @@ const AppNavigator = () => {
           headerTitle: route.params?.address ? 'Edit Address' : 'Add Address',
           headerBackTitle: 'Back',
         })}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfile}
+        options={{
+          headerShown: true,
+          headerTitle: 'Edit Profile',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePassword}
+        options={{
+          headerShown: true,
+          headerTitle: 'Change Password',
+          headerBackTitle: 'Back',
+        }}
       />
     </Stack.Navigator>
   );

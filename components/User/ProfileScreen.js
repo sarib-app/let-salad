@@ -1,15 +1,56 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { deleteAccount } from '../../utils/api';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+              });
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to delete account.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleMenuPress = (item) => {
     switch (item.id) {
+      case 1: // Edit Profile
+        navigation.navigate('EditProfile');
+        break;
       case 3: // Delivery Address
         navigation.navigate('AddressManagement');
+        break;
+      case 5: // Help & Support
+        Linking.openURL('mailto:support@letsalad.com');
+        break;
+      case 6: // Terms and Conditions
+        break;
+      case 7: // Privacy Policy
+        break;
+      case 8: // Delete Account
+        handleDeleteAccount();
+        break;
+      case 9: // Logout
         break;
       default:
         break;
@@ -17,13 +58,13 @@ const ProfileScreen = () => {
   };
   const menuItems = [
     { id: 1, title: 'Edit Profile', icon: '✏️' },
-    { id: 2, title: 'My Preferences', icon: '⚙️' },
     { id: 3, title: 'Delivery Address', icon: '📍' },
     { id: 4, title: 'Payment Methods', icon: '💳' },
-    { id: 5, title: 'Order History', icon: '📦' },
-    { id: 6, title: 'Help & Support', icon: '💬' },
-    { id: 7, title: 'Settings', icon: '🔧' },
-    { id: 8, title: 'Logout', icon: '🚪' },
+    { id: 5, title: 'Help & Support', icon: '💬' },
+    { id: 6, title: 'Terms & Conditions', icon: '📄' },
+    { id: 7, title: 'Privacy Policy', icon: '🔏' },
+    { id: 8, title: 'Delete Account', icon: '🗑️' },
+    { id: 9, title: 'Logout', icon: '🚪' },
   ];
 
   return (

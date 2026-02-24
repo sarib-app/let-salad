@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { updateProfile, getCurrentUser } from '../../utils/api';
 
-const CompleteProfile = ({ navigation, onComplete }) => {
+const EditProfile = ({ navigation }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -67,11 +67,10 @@ const CompleteProfile = ({ navigation, onComplete }) => {
     );
   };
 
-  const handleContinue = async () => {
+  const handleSave = async () => {
     if (isFormValid()) {
       setLoading(true);
       try {
-        // Backend expects: {name, email, language, sex, weight, height, age}
         const profileData = {
           name: formData.name,
           email: formData.email,
@@ -79,27 +78,23 @@ const CompleteProfile = ({ navigation, onComplete }) => {
           weight: parseFloat(formData.weight),
           height: parseInt(formData.height),
           age: parseInt(formData.age),
-          language: 'en', // Default to English
+          language: 'en',
         };
 
         const response = await updateProfile(profileData);
 
-        // Backend returns: {code: 200, message: "...", user: {...}}
         if (response.code === 200) {
-          // Profile saved successfully
-          if (onComplete) {
-            onComplete();
-          } else {
-            navigation.navigate('Preferences');
-          }
+          Alert.alert('Success', 'Profile updated successfully', [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
         } else {
-          Alert.alert('Error', response.message || 'Failed to save profile');
+          Alert.alert('Error', response.message || 'Failed to update profile');
         }
       } catch (error) {
         console.error('Profile Update Error:', error);
         Alert.alert(
           'Error',
-          error.message || 'Failed to save profile. Please try again.'
+          error.message || 'Failed to update profile. Please try again.'
         );
       } finally {
         setLoading(false);
@@ -125,11 +120,6 @@ const CompleteProfile = ({ navigation, onComplete }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Complete Your Profile</Text>
-          <Text style={styles.subtitle}>
-            Help us personalize your meal experience
-          </Text>
-
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Full Name</Text>
@@ -234,19 +224,23 @@ const CompleteProfile = ({ navigation, onComplete }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, !isFormValid() && styles.buttonDisabled]}
-            onPress={handleContinue}
-            disabled={!isFormValid()}
+            style={[styles.button, (!isFormValid() || loading) && styles.buttonDisabled]}
+            onPress={handleSave}
+            disabled={!isFormValid() || loading}
           >
             <LinearGradient
-              colors={isFormValid() ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
+              colors={isFormValid() && !loading ? ['#00B14F', '#00D95F'] : ['#E5E5E5', '#E5E5E5']}
               style={styles.buttonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={[styles.buttonText, !isFormValid() && styles.buttonTextDisabled]}>
-                Continue
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={[styles.buttonText, !isFormValid() && styles.buttonTextDisabled]}>
+                  Save Changes
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -271,19 +265,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: 60,
-  },
-  title: {
-    ...Fonts.bold,
-    fontSize: 28,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-  subtitle: {
-    ...Fonts.regular,
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xl,
+    paddingTop: Spacing.xl,
   },
   formContainer: {
     marginBottom: Spacing.lg,
@@ -366,4 +348,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CompleteProfile;
+export default EditProfile;

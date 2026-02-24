@@ -138,6 +138,41 @@ export const logout = async () => {
   }
 };
 
+/**
+ * 6. Change password
+ * @param {string} currentPassword - Current password
+ * @param {string} newPassword - New password
+ * @param {string} passwordConfirmation - New password confirmation
+ * @returns {Promise<{code: number, message: string}>}
+ */
+export const changePassword = async (currentPassword, newPassword, passwordConfirmation) => {
+  try {
+    const response = await api.put('/mobile/auth/password', {
+      current_password: currentPassword,
+      password: newPassword,
+      password_confirmation: passwordConfirmation,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * 7. Delete user account
+ * @returns {Promise<{code: number, message: string}>}
+ */
+export const deleteAccount = async () => {
+  try {
+    const response = await api.delete('/mobile/auth/account');
+    await AsyncStorage.removeItem('@auth_token');
+    await AsyncStorage.removeItem('@user_data');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 // ==================== PREFERENCES APIs ====================
 
 /**

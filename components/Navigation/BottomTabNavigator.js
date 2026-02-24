@@ -7,6 +7,7 @@ import { Colors, Fonts } from '../../utils/globalStyles';
 import HomeScreen from '../Home/HomeScreen';
 import SubscriptionsScreen from '../Subscription/SubscriptionsScreen';
 import ProfileScreen from '../User/ProfileScreen';
+// import TestPaymentScreen from './TestPaymentScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -57,6 +58,16 @@ const BottomTabNavigator = () => {
           ),
         }}
       />
+      {/* <Tab.Screen
+        name="TestPayment"
+        component={TestPaymentScreen}
+        options={{
+          tabBarLabel: 'Test',
+          tabBarIcon: ({ focused }) => (
+            <Text style={styles.tabIcon}>{focused ? '💳' : '💳'}</Text>
+          ),
+        }}
+      /> */}
     </Tab.Navigator>
   );
 };

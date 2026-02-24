@@ -1,26 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import CompleteProfile from '../User/CompleteProfile';
 import Preferences from '../User/Preferences';
 import MenuScreen from '../Menu/MenuScreen';
-import { getUserPreferences } from '../../utils/storage';
+import { getCurrentUser } from '../../utils/api';
 import { Colors } from '../../utils/globalStyles';
 
 const HomeScreen = ({ navigation }) => {
-  const [hasCompletedPreferences, setHasCompletedPreferences] = useState(false);
+  const [profileCompleted, setProfileCompleted] = useState(true);
+  const [preferencesCompleted, setPreferencesCompleted] = useState(true);
   const [loading, setLoading] = useState(true);
 
-  // Check if user has completed preferences on mount and when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      checkPreferences();
+      checkUserStatus();
     }, [])
   );
 
-  const checkPreferences = async () => {
-    const prefs = await getUserPreferences();
-    setHasCompletedPreferences(!!prefs);
-    setLoading(false);
+  const checkUserStatus = async () => {
+    try {
+      const response = await getCurrentUser();
+      if (response.code === 200 && response.user) {
+        setProfileCompleted(response.user.has_completed_profile === true);
+        setPreferencesCompleted(response.user.has_completed_preferences === true);
+      }
+    } catch (error) {
+      console.error('Error fetching user status:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -31,17 +40,27 @@ const HomeScreen = ({ navigation }) => {
     );
   }
 
-  // Show Preferences for new users first
-  if (!hasCompletedPreferences) {
+  // Show CompleteProfile if not completed
+  if (!profileCompleted) {
     return (
-      <Preferences
+      <CompleteProfile
         navigation={navigation}
-        onComplete={() => setHasCompletedPreferences(true)}
+        onComplete={() => setProfileCompleted(true)}
       />
     );
   }
 
-  // After preferences complete, show Menu
+  // Show Preferences if not completed
+  if (!preferencesCompleted) {
+    return (
+      <Preferences
+        navigation={navigation}
+        onComplete={() => setPreferencesCompleted(true)}
+      />
+    );
+  }
+
+  // Both complete, show Menu
   return <MenuScreen navigation={navigation} />;
 };
 

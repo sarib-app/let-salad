@@ -15,6 +15,8 @@ import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan, getMenu } fr
 const MealSelectionScreen = ({ route, navigation }) => {
   const { subscription, onMealsSelected } = route.params;
 
+  console.log('=== Subscription Details ===', JSON.stringify(subscription, null, 2));
+
   const [availableMenus, setAvailableMenus] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -133,9 +135,9 @@ const MealSelectionScreen = ({ route, navigation }) => {
       return requirements;
     }
 
-    // Fall back to subscription_package.contents object
-    // e.g. { chicken_meals: 24, salad: 10 } → { chicken: 24, salad: 10 }
-    const contents = subscription.subscription_package?.contents;
+    // Check subscription.contents directly (primary source)
+    // e.g. { chicken: 48, beef: 48 } or { chicken_meals: 48 }
+    const contents = subscription.contents || subscription.subscription_package?.contents;
     if (contents && typeof contents === 'object') {
       Object.entries(contents).forEach(([key, qty]) => {
         // Strip common suffixes like "_meals" to match menu category
@@ -158,22 +160,8 @@ const MealSelectionScreen = ({ route, navigation }) => {
   };
 
   const isSelectionComplete = () => {
-    const requirements = getMealRequirements();
-    const selected = {};
-
-    selectedMeals.forEach((meal) => {
-      const type = meal.category.toLowerCase();
-      selected[type] = (selected[type] || 0) + 1;
-    });
-
-    // Check if all requirements are met
-    for (const [type, qty] of Object.entries(requirements)) {
-      if ((selected[type] || 0) !== qty) {
-        return false;
-      }
-    }
-
-    return true;
+    // User just needs at least 1 meal selected
+    return selectedMeals.length > 0;
   };
 
   const handleSelectMeal = (meal) => {
