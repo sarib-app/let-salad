@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { validateAddressCoordinates } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const CheckoutScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { package: selectedPackage, subscriptionType, duration, deliveryPreferences } = route.params;
   const price = selectedPackage.price;
 
@@ -99,9 +101,9 @@ const CheckoutScreen = ({ route, navigation }) => {
   const handlePayWithCard = () => {
     if (!canPlaceOrder) {
       if (!deliveryAddress?.id) {
-        Alert.alert('Address Required', 'Please select a delivery address before proceeding.');
+        Alert.alert(t('checkout.addressRequired'), t('checkout.selectAddressFirst'));
       } else if (isInDeliveryZone === false) {
-        Alert.alert('Out of Delivery Zone', 'This area is out of our delivery zone. Please select a different address.');
+        Alert.alert(t('checkout.outOfDeliveryZone'), t('checkout.outOfZoneAlert'));
       }
       return;
     }
@@ -136,12 +138,12 @@ const CheckoutScreen = ({ route, navigation }) => {
       >
         {/* Order Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <Text style={styles.sectionTitle}>{t('checkout.orderSummary')}</Text>
           <View style={styles.packageCard}>
             <View style={styles.packageHeader}>
               <Text style={styles.packageTitle}>{selectedPackage.name}</Text>
               <View style={styles.durationBadge}>
-                <Text style={styles.durationText}>{duration} Days</Text>
+                <Text style={styles.durationText}>{duration} {t('common.days')}</Text>
               </View>
             </View>
             {selectedPackage.description && (
@@ -160,9 +162,9 @@ const CheckoutScreen = ({ route, navigation }) => {
         {/* Delivery Address */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <Text style={styles.sectionTitle}>{t('checkout.deliveryAddress')}</Text>
             <TouchableOpacity onPress={handleEditAddress}>
-              <Text style={styles.editButton}>Edit</Text>
+              <Text style={styles.editButton}>{t('common.edit')}</Text>
             </TouchableOpacity>
           </View>
           <View style={[
@@ -181,14 +183,14 @@ const CheckoutScreen = ({ route, navigation }) => {
                 {validatingZone && (
                   <View style={styles.zoneValidationRow}>
                     <ActivityIndicator size="small" color={Colors.primary} />
-                    <Text style={styles.zoneValidatingText}>Checking delivery zone...</Text>
+                    <Text style={styles.zoneValidatingText}>{t('checkout.checkingZone')}</Text>
                   </View>
                 )}
                 {!validatingZone && isInDeliveryZone === true && pricingZone && (
                   <View style={styles.zoneValidationRow}>
                     <Text style={styles.zoneSuccessIcon}>✓</Text>
                     <Text style={styles.zoneSuccessText}>
-                      In delivery zone ({pricingZone.name})
+                      {t('checkout.inDeliveryZone')} ({pricingZone.name})
                     </Text>
                   </View>
                 )}
@@ -196,20 +198,20 @@ const CheckoutScreen = ({ route, navigation }) => {
                   <View style={styles.zoneErrorBanner}>
                     <Text style={styles.zoneErrorIcon}>⚠️</Text>
                     <Text style={styles.zoneErrorText}>
-                      This area is out of our delivery zone. Please select a different address.
+                      {t('checkout.outOfZone')}
                     </Text>
                   </View>
                 )}
               </>
             ) : (
-              <Text style={styles.addressText}>No address selected</Text>
+              <Text style={styles.addressText}>{t('checkout.noAddressSelected')}</Text>
             )}
           </View>
         </View>
 
         {/* Payment Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pay Now</Text>
+          <Text style={styles.sectionTitle}>{t('checkout.payNow')}</Text>
 
           {/* Pay with Card Button */}
           <TouchableOpacity
@@ -217,36 +219,36 @@ const CheckoutScreen = ({ route, navigation }) => {
             onPress={handlePayWithCard}
             disabled={!canPlaceOrder}
           >
-            <Text style={styles.cardPayText}>Pay with Card</Text>
+            <Text style={styles.cardPayText}>{t('checkout.payWithCard')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Price Breakdown */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Price Details</Text>
+          <Text style={styles.sectionTitle}>{t('checkout.priceDetails')}</Text>
           <View style={styles.priceCard}>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Package Price</Text>
-              <Text style={styles.priceValue}>{price} SAR</Text>
+              <Text style={styles.priceLabel}>{t('checkout.packagePrice')}</Text>
+              <Text style={styles.priceValue}>{price} {t('common.sar')}</Text>
             </View>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Delivery Fee</Text>
+              <Text style={styles.priceLabel}>{t('checkout.deliveryFee')}</Text>
               {validatingZone ? (
                 <ActivityIndicator size="small" color={Colors.primary} />
               ) : deliveryFee > 0 ? (
-                <Text style={styles.priceValue}>{deliveryFee} SAR</Text>
+                <Text style={styles.priceValue}>{deliveryFee} {t('common.sar')}</Text>
               ) : (
-                <Text style={styles.priceFree}>Free</Text>
+                <Text style={styles.priceFree}>{t('common.free')}</Text>
               )}
             </View>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Tax (15%)</Text>
-              <Text style={styles.priceValue}>{tax} SAR</Text>
+              <Text style={styles.priceLabel}>{t('checkout.tax')}</Text>
+              <Text style={styles.priceValue}>{tax} {t('common.sar')}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.priceRow}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalValue}>{total} SAR</Text>
+              <Text style={styles.totalLabel}>{t('checkout.totalAmount')}</Text>
+              <Text style={styles.totalValue}>{total} {t('common.sar')}</Text>
             </View>
           </View>
         </View>
@@ -259,7 +261,7 @@ const CheckoutScreen = ({ route, navigation }) => {
         <View style={styles.bottomContainer}>
           <View style={styles.bottomWarning}>
             <Text style={styles.bottomWarningText}>
-              Selected address is out of delivery zone
+              {t('checkout.outOfZoneBottom')}
             </Text>
           </View>
         </View>

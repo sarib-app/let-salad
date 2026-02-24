@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { listAddresses, deleteAddress, setPrimaryAddress } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const TYPE_ICONS = {
   home: '🏠',
@@ -20,6 +21,7 @@ const TYPE_ICONS = {
 };
 
 const AddressManagementScreen = ({ navigation }) => {
+  const { t } = useLanguage();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,7 +43,7 @@ const AddressManagementScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading addresses:', error);
-      Alert.alert('Error', 'Failed to load addresses. Please try again.');
+      Alert.alert(t('common.error'), t('address.failedLoadAddresses'));
     } finally {
       setLoading(false);
     }
@@ -71,12 +73,12 @@ const AddressManagementScreen = ({ navigation }) => {
 
   const handleDelete = (address) => {
     Alert.alert(
-      'Delete Address',
-      `Are you sure you want to delete this ${address.type || ''} address?`,
+      t('address.deleteAddress'),
+      `${t('address.deleteAddressConfirm')} ${address.type || ''} ${t('address.addressQuestion')}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -85,11 +87,11 @@ const AddressManagementScreen = ({ navigation }) => {
               if (response.code === 200) {
                 setAddresses((prev) => prev.filter((a) => a.id !== address.id));
               } else {
-                Alert.alert('Error', response.message || 'Failed to delete address.');
+                Alert.alert(t('common.error'), response.message || t('address.failedDeleteAddress'));
               }
             } catch (error) {
               console.error('Error deleting address:', error);
-              Alert.alert('Error', error.message || 'Failed to delete address.');
+              Alert.alert(t('common.error'), error.message || t('address.failedDeleteAddress'));
             } finally {
               setActionLoading(null);
             }
@@ -112,11 +114,11 @@ const AddressManagementScreen = ({ navigation }) => {
           }))
         );
       } else {
-        Alert.alert('Error', response.message || 'Failed to set primary address.');
+        Alert.alert(t('common.error'), response.message || t('address.failedSetPrimary'));
       }
     } catch (error) {
       console.error('Error setting primary:', error);
-      Alert.alert('Error', error.message || 'Failed to set primary address.');
+      Alert.alert(t('common.error'), error.message || t('address.failedSetPrimary'));
     } finally {
       setActionLoading(null);
     }
@@ -131,7 +133,7 @@ const AddressManagementScreen = ({ navigation }) => {
       <View style={styles.container}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading addresses...</Text>
+          <Text style={styles.loadingText}>{t('address.loadingAddresses')}</Text>
         </View>
       </View>
     );
@@ -153,9 +155,9 @@ const AddressManagementScreen = ({ navigation }) => {
         {addresses.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>📍</Text>
-            <Text style={styles.emptyTitle}>No Addresses Yet</Text>
+            <Text style={styles.emptyTitle}>{t('address.noAddresses')}</Text>
             <Text style={styles.emptySubtitle}>
-              Add your first delivery address to get started
+              {t('address.noAddressesDesc')}
             </Text>
           </View>
         ) : (
@@ -172,7 +174,7 @@ const AddressManagementScreen = ({ navigation }) => {
                     <Text style={styles.typeLabel}>{getTypeLabel(address.type)}</Text>
                     {address.is_primary && (
                       <View style={styles.primaryBadge}>
-                        <Text style={styles.primaryBadgeText}>Primary</Text>
+                        <Text style={styles.primaryBadgeText}>{t('common.primary')}</Text>
                       </View>
                     )}
                   </View>
@@ -184,8 +186,8 @@ const AddressManagementScreen = ({ navigation }) => {
                 <Text style={styles.streetAddress}>{address.street_address}</Text>
                 {address.building_number && (
                   <Text style={styles.detailText}>
-                    Building {address.building_number}
-                    {address.apartment_number ? `, Apt ${address.apartment_number}` : ''}
+                    {t('address.building')} {address.building_number}
+                    {address.apartment_number ? `, ${t('address.apt')} ${address.apartment_number}` : ''}
                   </Text>
                 )}
                 <Text style={styles.detailText}>
@@ -194,7 +196,7 @@ const AddressManagementScreen = ({ navigation }) => {
                     .join(', ')}
                 </Text>
                 {address.delivery_notes ? (
-                  <Text style={styles.notesText}>Note: {address.delivery_notes}</Text>
+                  <Text style={styles.notesText}>{t('address.note')} {address.delivery_notes}</Text>
                 ) : null}
 
                 <View style={styles.cardActions}>
@@ -204,7 +206,7 @@ const AddressManagementScreen = ({ navigation }) => {
                       onPress={() => handleSetPrimary(address)}
                       disabled={isActing}
                     >
-                      <Text style={styles.actionButtonText}>Set Primary</Text>
+                      <Text style={styles.actionButtonText}>{t('address.setPrimary')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
@@ -212,14 +214,14 @@ const AddressManagementScreen = ({ navigation }) => {
                     onPress={() => handleEdit(address)}
                     disabled={isActing}
                   >
-                    <Text style={styles.actionButtonText}>Edit</Text>
+                    <Text style={styles.actionButtonText}>{t('common.edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionButton, styles.deleteButton]}
                     onPress={() => handleDelete(address)}
                     disabled={isActing}
                   >
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -230,7 +232,7 @@ const AddressManagementScreen = ({ navigation }) => {
         {/* Add New Address Button */}
         <TouchableOpacity style={styles.addNewButton} onPress={handleAddNew}>
           <Text style={styles.addNewIcon}>+</Text>
-          <Text style={styles.addNewText}>Add New Address</Text>
+          <Text style={styles.addNewText}>{t('address.addNewAddress')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

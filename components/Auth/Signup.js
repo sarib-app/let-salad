@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { t } from '../../utils/lang';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Signup = ({ navigation }) => {
+  const { t } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -36,12 +37,12 @@ const Signup = ({ navigation }) => {
       >
         <View style={styles.header}>
           <Text style={styles.logo}>Let'Salad</Text>
-          <Text style={styles.tagline}>Fresh meals, delivered daily</Text>
+          <Text style={styles.tagline}>{t('auth.freshMeals')}</Text>
         </View>
 
         <View style={styles.formContainer}>
           <Text style={styles.title}>{t('auth.signup')}</Text>
-          <Text style={styles.subtitle}>Create your account to get started</Text>
+          <Text style={styles.subtitle}>{t('auth.createAccount')}</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t('auth.fullName')}</Text>
@@ -129,7 +130,7 @@ const Signup = ({ navigation }) => {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('auth.or')}</Text>
+            <Text style={styles.dividerText}>{t('common.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 

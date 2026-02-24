@@ -11,8 +11,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { getSubscriptionTypes, getSubscriptionPackages } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const SubscriptionPackagesScreen = ({ navigation }) => {
+  const { t } = useLanguage();
   const [subscriptionTypes, setSubscriptionTypes] = useState([]);
   const [selectedType, setSelectedType] = useState(null);
   const [packages, setPackages] = useState([]);
@@ -40,7 +42,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading subscription types:', error);
-      Alert.alert('Error', 'Failed to load subscription plans. Please try again.');
+      Alert.alert(t('common.error'), t('packages.failedLoadPackages'));
     } finally {
       setLoading(false);
     }
@@ -95,7 +97,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading packages...</Text>
+        <Text style={styles.loadingText}>{t('packages.loadingPackages')}</Text>
       </View>
     );
   }
@@ -103,8 +105,8 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Choose Your Plan</Text>
-        <Text style={styles.subtitle}>Select a subscription package that fits your lifestyle</Text>
+        <Text style={styles.title}>{t('packages.title')}</Text>
+        <Text style={styles.subtitle}>{t('packages.subtitle')}</Text>
 
         {/* Duration Toggle */}
         {subscriptionTypes.length > 1 && (
@@ -124,7 +126,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
                     selectedType?.id === type.id && styles.durationTextActive,
                   ]}
                 >
-                  {type.duration_days} Days
+                  {type.duration_days} {t('common.days')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -135,7 +137,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
       {packagesLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading packages...</Text>
+          <Text style={styles.loadingText}>{t('packages.loadingPackages')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -144,7 +146,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
         >
           {packages.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No packages available for this plan</Text>
+              <Text style={styles.emptyStateText}>{t('packages.noPackages')}</Text>
             </View>
           ) : (
             packages.map((pkg, index) => {
@@ -158,7 +160,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
                 >
                   {isFirst && (
                     <View style={styles.popularBadge}>
-                      <Text style={styles.popularText}>⭐ Recommended</Text>
+                      <Text style={styles.popularText}>⭐ {t('packages.recommended')}</Text>
                     </View>
                   )}
 
@@ -166,7 +168,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
                     <Text style={styles.packageTitle}>{pkg.name}</Text>
                     <View style={styles.priceContainer}>
                       <Text style={styles.price}>{pkg.price}</Text>
-                      <Text style={styles.currency}> SAR</Text>
+                      <Text style={styles.currency}> {t('common.sar')}</Text>
                     </View>
                   </View>
 
@@ -178,14 +180,14 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
 
                   {pkg.contents && Object.keys(pkg.contents).length > 0 && (
                     <View style={styles.mealsContainer}>
-                      <Text style={styles.mealsLabel}>Includes:</Text>
+                      <Text style={styles.mealsLabel}>{t('packages.includes')}</Text>
                       <Text style={styles.mealsText}>{getContentsSummary(pkg.contents)}</Text>
                     </View>
                   )}
 
                   <View style={styles.durationBadge}>
                     <Text style={styles.durationBadgeText}>
-                      {selectedType?.duration_days} Days
+                      {selectedType?.duration_days} {t('common.days')}
                     </Text>
                   </View>
 
@@ -202,7 +204,7 @@ const SubscriptionPackagesScreen = ({ navigation }) => {
                           !isFirst && styles.selectButtonTextSecondary,
                         ]}
                       >
-                        Select Plan
+                        {t('packages.selectPlan')}
                       </Text>
                     </LinearGradient>
                   </View>

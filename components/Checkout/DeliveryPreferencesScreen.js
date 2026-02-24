@@ -12,8 +12,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { listAddresses } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const DeliveryPreferencesScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { package: selectedPackage, subscriptionType, duration } = route.params;
 
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -44,7 +46,7 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error loading addresses:', error);
-      Alert.alert('Error', 'Failed to load addresses.');
+      Alert.alert(t('common.error'), t('delivery.failedLoadAddresses'));
     } finally {
       setAddressLoading(false);
     }
@@ -52,21 +54,21 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
 
   // Time slots
   const timeSlots = [
-    { id: 'morning', label: 'Morning', time: '7:00 AM - 10:00 AM', icon: '🌅' },
-    { id: 'afternoon', label: 'Afternoon', time: '12:00 PM - 3:00 PM', icon: '☀️' },
-    { id: 'evening', label: 'Evening', time: '6:00 PM - 9:00 PM', icon: '🌆' },
+    { id: 'morning', label: t('delivery.morning'), time: t('delivery.morningTime'), icon: '🌅' },
+    { id: 'afternoon', label: t('delivery.afternoon'), time: t('delivery.afternoonTime'), icon: '☀️' },
+    { id: 'evening', label: t('delivery.evening'), time: t('delivery.eveningTime'), icon: '🌆' },
   ];
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('morning');
 
   // Days of the week
   const daysOfWeek = [
-    { id: 'sun', label: 'Sun', fullName: 'Sunday' },
-    { id: 'mon', label: 'Mon', fullName: 'Monday' },
-    { id: 'tue', label: 'Tue', fullName: 'Tuesday' },
-    { id: 'wed', label: 'Wed', fullName: 'Wednesday' },
-    { id: 'thu', label: 'Thu', fullName: 'Thursday' },
-    { id: 'fri', label: 'Fri', fullName: 'Friday' },
-    { id: 'sat', label: 'Sat', fullName: 'Saturday' },
+    { id: 'sun', label: t('delivery.sun'), fullName: 'Sunday' },
+    { id: 'mon', label: t('delivery.mon'), fullName: 'Monday' },
+    { id: 'tue', label: t('delivery.tue'), fullName: 'Tuesday' },
+    { id: 'wed', label: t('delivery.wed'), fullName: 'Wednesday' },
+    { id: 'thu', label: t('delivery.thu'), fullName: 'Thursday' },
+    { id: 'fri', label: t('delivery.fri'), fullName: 'Friday' },
+    { id: 'sat', label: t('delivery.sat'), fullName: 'Saturday' },
   ];
 
   // Default to all days selected
@@ -99,7 +101,7 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
 
   const handleContinue = () => {
     if (!selectedAddressId) {
-      Alert.alert('Address Required', 'Please select or add a delivery address.');
+      Alert.alert(t('delivery.addressRequired'), t('delivery.selectOrAddAddress'));
       return;
     }
 
@@ -134,15 +136,15 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
       >
         {/* Delivery Address Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
+          <Text style={styles.sectionTitle}>{t('delivery.deliveryAddress')}</Text>
           <Text style={styles.sectionSubtitle}>
-            Where should we deliver your meals?
+            {t('delivery.whereDeliver')}
           </Text>
 
           {addressLoading ? (
             <View style={styles.addressLoadingContainer}>
               <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.addressLoadingText}>Loading addresses...</Text>
+              <Text style={styles.addressLoadingText}>{t('common.loading')}</Text>
             </View>
           ) : (
             <>
@@ -171,7 +173,7 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
                         </Text>
                         {address.is_primary && (
                           <View style={styles.defaultBadge}>
-                            <Text style={styles.defaultText}>Primary</Text>
+                            <Text style={styles.defaultText}>{t('common.primary')}</Text>
                           </View>
                         )}
                       </View>
@@ -188,15 +190,15 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
 
           <TouchableOpacity style={styles.addNewButton} onPress={handleAddNewAddress}>
             <Text style={styles.addNewIcon}>+</Text>
-            <Text style={styles.addNewText}>Add New Address</Text>
+            <Text style={styles.addNewText}>{t('address.addNewAddress')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Time Slot Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferred Delivery Time</Text>
+          <Text style={styles.sectionTitle}>{t('delivery.preferredTime')}</Text>
           <Text style={styles.sectionSubtitle}>
-            When would you like to receive your meals?
+            {t('delivery.whenReceive')}
           </Text>
 
           <View style={styles.timeSlotsContainer}>
@@ -235,13 +237,13 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <View style={styles.daysHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Delivery Days</Text>
+              <Text style={styles.sectionTitle}>{t('delivery.deliveryDays')}</Text>
               <Text style={styles.sectionSubtitle}>
-                Select the days you want deliveries ({duration} days total)
+                {t('delivery.selectDays')} ({duration} {t('delivery.daysTotal')})
               </Text>
             </View>
             <TouchableOpacity onPress={handleSelectAllDays} style={styles.selectAllButton}>
-              <Text style={styles.selectAllText}>Select All</Text>
+              <Text style={styles.selectAllText}>{t('delivery.selectAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -271,21 +273,20 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📅</Text>
               <Text style={styles.infoText}>
-                {daysPerWeek} {daysPerWeek === 1 ? 'day' : 'days'} per week
+                {daysPerWeek} {daysPerWeek === 1 ? t('common.day') : t('common.days')} {t('delivery.perWeek')}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📦</Text>
               <Text style={styles.infoText}>
-                Estimated {estimatedWeeks} {estimatedWeeks === 1 ? 'week' : 'weeks'} of
-                deliveries
+                {t('delivery.estimated')} {estimatedWeeks} {estimatedWeeks === 1 ? t('delivery.week') : t('delivery.weeks')} {t('delivery.ofDeliveries')}
               </Text>
             </View>
             {selectedDays.length < 7 && (
               <View style={styles.skipNote}>
                 <Text style={styles.skipNoteText}>
-                  You can skip up to {7 - selectedDays.length}{' '}
-                  {7 - selectedDays.length === 1 ? 'day' : 'days'} per week
+                  {t('delivery.canSkip')} {7 - selectedDays.length}{' '}
+                  {7 - selectedDays.length === 1 ? t('common.day') : t('common.days')} {t('delivery.perWeek')}
                 </Text>
               </View>
             )}
@@ -304,7 +305,7 @@ const DeliveryPreferencesScreen = ({ route, navigation }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.continueText}>Continue to Checkout</Text>
+            <Text style={styles.continueText}>{t('delivery.continueToCheckout')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

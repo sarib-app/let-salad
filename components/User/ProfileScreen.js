@@ -2,19 +2,21 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 import { deleteAccount } from '../../utils/api';
 
 const ProfileScreen = () => {
+  const { t, language, setLanguage } = useLanguage();
   const navigation = useNavigation();
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
+      t('profileScreen.deleteAccountTitle'),
+      t('profileScreen.deleteAccountMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -24,7 +26,7 @@ const ProfileScreen = () => {
                 routes: [{ name: 'Auth' }],
               });
             } catch (error) {
-              Alert.alert('Error', error.message || 'Failed to delete account.');
+              Alert.alert(t('common.error'), error.message || t('profileScreen.failedDeleteAccount'));
             }
           },
         },
@@ -32,10 +34,18 @@ const ProfileScreen = () => {
     );
   };
 
+  const handleLanguageToggle = () => {
+    const newLang = language === 'en' ? 'ar' : 'en';
+    setLanguage(newLang);
+  };
+
   const handleMenuPress = (item) => {
     switch (item.id) {
       case 1: // Edit Profile
         navigation.navigate('EditProfile');
+        break;
+      case 2: // Language
+        handleLanguageToggle();
         break;
       case 3: // Delivery Address
         navigation.navigate('AddressManagement');
@@ -57,14 +67,15 @@ const ProfileScreen = () => {
     }
   };
   const menuItems = [
-    { id: 1, title: 'Edit Profile', icon: '✏️' },
-    { id: 3, title: 'Delivery Address', icon: '📍' },
-    { id: 4, title: 'Payment Methods', icon: '💳' },
-    { id: 5, title: 'Help & Support', icon: '💬' },
-    { id: 6, title: 'Terms & Conditions', icon: '📄' },
-    { id: 7, title: 'Privacy Policy', icon: '🔏' },
-    { id: 8, title: 'Delete Account', icon: '🗑️' },
-    { id: 9, title: 'Logout', icon: '🚪' },
+    { id: 1, titleKey: 'profileScreen.editProfile', icon: '✏️' },
+    { id: 2, title: `${t('profileScreen.language')} (${language === 'en' ? 'العربية' : 'English'})`, icon: '🌐' },
+    { id: 3, titleKey: 'profileScreen.deliveryAddress', icon: '📍' },
+    { id: 4, titleKey: 'profileScreen.paymentMethods', icon: '💳' },
+    { id: 5, titleKey: 'profileScreen.helpSupport', icon: '💬' },
+    { id: 6, titleKey: 'profileScreen.termsConditions', icon: '📄' },
+    { id: 7, titleKey: 'profileScreen.privacyPolicy', icon: '🔏' },
+    { id: 8, titleKey: 'profileScreen.deleteAccount', icon: '🗑️' },
+    { id: 9, titleKey: 'profileScreen.logout', icon: '🚪' },
   ];
 
   return (
@@ -82,7 +93,7 @@ const ProfileScreen = () => {
           <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuPress(item)}>
             <View style={styles.menuItemLeft}>
               <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text style={styles.menuTitle}>{item.title}</Text>
+              <Text style={styles.menuTitle}>{item.title || t(item.titleKey)}</Text>
             </View>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>

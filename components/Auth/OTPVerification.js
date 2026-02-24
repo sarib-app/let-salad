@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 import { verifyOTP, sendOTP } from '../../utils/api';
 
 const OTPVerification = ({ navigation, route }) => {
+  const { t } = useLanguage();
   const { phoneNumber } = route.params;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
@@ -77,14 +79,14 @@ const OTPVerification = ({ navigation, route }) => {
             });
           }
         } else {
-          Alert.alert('Error', response.message || 'Invalid OTP');
+          Alert.alert(t('common.error'), response.message || t('otp.invalidOtp'));
         }
       } catch (error) {
         console.error('Verify OTP Error:', error);
         const errorMessage = error.code === 422
-          ? 'Invalid OTP code. Please try again.'
-          : error.message || 'The OTP code you entered is incorrect.';
-        Alert.alert('Invalid OTP', errorMessage);
+          ? t('otp.invalidOtpMessage')
+          : error.message || t('otp.incorrectOtp');
+        Alert.alert(t('otp.invalidOtp'), errorMessage);
       } finally {
         setLoading(false);
       }
@@ -107,13 +109,13 @@ const OTPVerification = ({ navigation, route }) => {
             console.log('==========================================');
           }
 
-          Alert.alert('Success', 'OTP has been resent to your phone');
+          Alert.alert(t('common.success'), t('otp.otpResent'));
         } else {
-          Alert.alert('Error', response.message || 'Failed to resend OTP');
+          Alert.alert(t('common.error'), response.message || t('otp.failedResend'));
         }
       } catch (error) {
         console.error('Resend OTP Error:', error);
-        Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+        Alert.alert(t('common.error'), t('otp.failedResendRetry'));
       }
     }
   };
@@ -146,9 +148,9 @@ const OTPVerification = ({ navigation, route }) => {
           </LinearGradient>
         </View>
 
-        <Text style={styles.title}>Enter Verification Code</Text>
+        <Text style={styles.title}>{t('otp.title')}</Text>
         <Text style={styles.subtitle}>
-          We've sent a 6-digit code to{'\n'}
+          {t('otp.sentTo')}{'\n'}
           <Text style={styles.phoneNumber}>{phoneNumber}</Text>
         </Text>
 
@@ -171,11 +173,11 @@ const OTPVerification = ({ navigation, route }) => {
         <View style={styles.resendContainer}>
           {!canResend ? (
             <Text style={styles.timerText}>
-              Resend code in <Text style={styles.timerNumber}>{timer}s</Text>
+              {t('otp.resendIn')} <Text style={styles.timerNumber}>{timer}s</Text>
             </Text>
           ) : (
             <TouchableOpacity onPress={handleResendOTP}>
-              <Text style={styles.resendText}>Resend Code</Text>
+              <Text style={styles.resendText}>{t('otp.resendCode')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -195,7 +197,7 @@ const OTPVerification = ({ navigation, route }) => {
               <ActivityIndicator color={Colors.white} />
             ) : (
               <Text style={[styles.buttonText, !isOTPComplete && styles.buttonTextDisabled]}>
-                Verify & Continue
+                {t('otp.verify')}
               </Text>
             )}
           </LinearGradient>

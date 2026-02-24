@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 
 const OrderConfirmationScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const {
     subscription,
     package: selectedPackage,
@@ -93,58 +95,58 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
           <View style={styles.checkmarkCircle}>
             <Text style={styles.checkmark}>✓</Text>
           </View>
-          <Text style={styles.successTitle}>Order Confirmed!</Text>
+          <Text style={styles.successTitle}>{t('orderConfirmation.orderConfirmed')}</Text>
           <Text style={styles.successSubtitle}>
-            Your subscription has been successfully activated
+            {t('orderConfirmation.subscriptionActivated')}
           </Text>
         </Animated.View>
 
         {/* Order Details */}
         <View style={styles.section}>
           <View style={styles.orderIdContainer}>
-            <Text style={styles.orderIdLabel}>Subscription ID</Text>
+            <Text style={styles.orderIdLabel}>{t('orderConfirmation.subscriptionId')}</Text>
             <Text style={styles.orderId}>#{subscription?.id || '-'}</Text>
           </View>
         </View>
 
         {/* Package Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Subscription Details</Text>
+          <Text style={styles.sectionTitle}>{t('orderConfirmation.subscriptionDetails')}</Text>
           <View style={styles.detailsCard}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Package</Text>
+              <Text style={styles.detailLabel}>{t('orderConfirmation.package')}</Text>
               <Text style={styles.detailValue}>
                 {subscription?.subscription_package?.name || selectedPackage?.name || '-'}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Plan</Text>
+              <Text style={styles.detailLabel}>{t('orderConfirmation.plan')}</Text>
               <Text style={styles.detailValue}>
                 {subscription?.subscription_type?.name || subscriptionType?.name || '-'}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Duration</Text>
+              <Text style={styles.detailLabel}>{t('orderConfirmation.duration')}</Text>
               <Text style={styles.detailValue}>
-                {subscription?.subscription_type?.duration_days || duration} Days
+                {subscription?.subscription_type?.duration_days || duration} {t('common.days')}
               </Text>
             </View>
             {selectedPackage?.contents && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Meals</Text>
+                <Text style={styles.detailLabel}>{t('orderConfirmation.meals')}</Text>
                 <Text style={styles.detailValue}>
                   {getContentsSummary(selectedPackage.contents)}
                 </Text>
               </View>
             )}
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Start Date</Text>
+              <Text style={styles.detailLabel}>{t('orderConfirmation.startDate')}</Text>
               <Text style={styles.detailValue}>
                 {formatDate(subscription?.start_date)}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>End Date</Text>
+              <Text style={styles.detailLabel}>{t('orderConfirmation.endDate')}</Text>
               <Text style={styles.detailValue}>
                 {formatDate(subscription?.end_date)}
               </Text>
@@ -155,7 +157,7 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
         {/* Delivery Address */}
         {subscription?.delivery_address && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <Text style={styles.sectionTitle}>{t('orderConfirmation.deliveryAddress')}</Text>
             <View style={styles.addressCard}>
               <Text style={styles.addressText}>
                 {subscription.delivery_address.street_address}, {subscription.delivery_address.district}
@@ -167,30 +169,30 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
 
         {/* Payment Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Summary</Text>
+          <Text style={styles.sectionTitle}>{t('orderConfirmation.paymentSummary')}</Text>
           <View style={styles.paymentCard}>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Package Price</Text>
+              <Text style={styles.paymentLabel}>{t('orderConfirmation.packagePrice')}</Text>
               <Text style={styles.paymentValue}>
-                {subscription?.subscription_package?.price || price} SAR
+                {subscription?.subscription_package?.price || price} {t('common.sar')}
               </Text>
             </View>
             {subscription?.delivery_charge > 0 && (
               <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Delivery Fee</Text>
-                <Text style={styles.paymentValue}>{subscription.delivery_charge} SAR</Text>
+                <Text style={styles.paymentLabel}>{t('orderConfirmation.deliveryFee')}</Text>
+                <Text style={styles.paymentValue}>{subscription.delivery_charge} {t('common.sar')}</Text>
               </View>
             )}
             <View style={styles.divider} />
             <View style={styles.paymentRow}>
-              <Text style={styles.totalLabel}>Total Paid</Text>
-              <Text style={styles.totalValue}>{total} SAR</Text>
+              <Text style={styles.totalLabel}>{t('orderConfirmation.totalPaid')}</Text>
+              <Text style={styles.totalValue}>{total} {t('common.sar')}</Text>
             </View>
             <View style={styles.paymentMethodRow}>
-              <Text style={styles.paidViaLabel}>Paid via</Text>
+              <Text style={styles.paidViaLabel}>{t('orderConfirmation.paidVia')}</Text>
               <Text style={styles.paidViaValue}>
                 {subscription?.payment_method === 'card'
-                  ? 'Credit Card'
+                  ? t('orderConfirmation.creditCard')
                   : subscription?.payment_method || paymentMethod?.type}
               </Text>
             </View>
@@ -199,24 +201,24 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
 
         {/* What's Next */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What's Next?</Text>
+          <Text style={styles.sectionTitle}>{t('orderConfirmation.whatsNext')}</Text>
           <View style={styles.nextStepsCard}>
             <View style={styles.stepRow}>
               <Text style={styles.stepIcon}>📦</Text>
               <Text style={styles.stepText}>
-                Your first delivery will arrive on {formatDate(subscription?.start_date)}
+                {t('orderConfirmation.firstDelivery')} {formatDate(subscription?.start_date)}
               </Text>
             </View>
             <View style={styles.stepRow}>
               <Text style={styles.stepIcon}>🍽️</Text>
               <Text style={styles.stepText}>
-                Head to "Select Meals" to choose your daily meals before 8:00 PM
+                {t('orderConfirmation.selectMealsNote')}
               </Text>
             </View>
             <View style={styles.stepRow}>
               <Text style={styles.stepIcon}>🔔</Text>
               <Text style={styles.stepText}>
-                We'll notify you when your meals are on the way
+                {t('orderConfirmation.notifyNote')}
               </Text>
             </View>
           </View>
@@ -228,7 +230,7 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
       {/* Fixed Bottom Buttons */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity style={styles.secondaryButton} onPress={handleBackToHome}>
-          <Text style={styles.secondaryButtonText}>Back to Home</Text>
+          <Text style={styles.secondaryButtonText}>{t('orderConfirmation.backToHome')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.primaryButton} onPress={handleViewSubscription}>
@@ -238,7 +240,7 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.primaryButtonText}>View Subscription</Text>
+            <Text style={styles.primaryButtonText}>{t('orderConfirmation.viewSubscription')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

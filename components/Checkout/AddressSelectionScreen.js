@@ -12,8 +12,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { listAddresses } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const AddressSelectionScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { currentAddress, onAddressSelect } = route.params;
 
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -46,8 +48,8 @@ const AddressSelectionScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error loading addresses:', error);
-      Alert.alert('Error', 'Failed to load addresses.');
-    } finally {
+      Alert.alert(t('common.error'), t('addressSelection.noAddresses'));
+    } finally{
       setLoading(false);
     }
   };
@@ -73,7 +75,7 @@ const AddressSelectionScreen = ({ route, navigation }) => {
       <View style={styles.container}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading addresses...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </View>
     );
@@ -85,12 +87,12 @@ const AddressSelectionScreen = ({ route, navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Select Delivery Address</Text>
+        <Text style={styles.title}>{t('addressSelection.title')}</Text>
 
         {savedAddresses.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              No addresses found. Add a new address to continue.
+              {t('addressSelection.noAddresses')}
             </Text>
           </View>
         ) : (
@@ -119,7 +121,7 @@ const AddressSelectionScreen = ({ route, navigation }) => {
                     </Text>
                     {address.is_primary && (
                       <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultText}>Primary</Text>
+                        <Text style={styles.defaultText}>{t('common.primary')}</Text>
                       </View>
                     )}
                   </View>
@@ -138,7 +140,7 @@ const AddressSelectionScreen = ({ route, navigation }) => {
           onPress={handleAddNewAddress}
         >
           <Text style={styles.addNewIcon}>+</Text>
-          <Text style={styles.addNewText}>Add New Address</Text>
+          <Text style={styles.addNewText}>{t('addressSelection.addNewAddress')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
@@ -156,7 +158,7 @@ const AddressSelectionScreen = ({ route, navigation }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.confirmButtonText}>Confirm Address</Text>
+            <Text style={styles.confirmButtonText}>{t('addressSelection.confirmAddress')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 import { saveUserPreferences } from '../../utils/storage';
 import { savePreferences } from '../../utils/api';
 
 const Preferences = ({ navigation, onComplete }) => {
+  const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState({
@@ -27,57 +29,57 @@ const Preferences = ({ navigation, onComplete }) => {
   const subscribingOptions = [
     {
       id: 'me',
-      title: 'For me',
-      subtitle: 'Personalized meal plans for your fitness goals',
+      titleKey: 'preferences.forMe',
+      subtitleKey: 'preferences.forMeDesc',
       emoji: '🎒',
     },
     {
       id: 'kids',
-      title: 'For kids',
-      subtitle: 'Healthy meal plans for kids aged 2-12',
+      titleKey: 'preferences.forKids',
+      subtitleKey: 'preferences.forKidsDesc',
       emoji: '🥗',
     },
   ];
 
   const genderOptions = [
-    { id: 'male', name: 'Male', emoji: '👨' },
-    { id: 'female', name: 'Female', emoji: '👩' },
+    { id: 'male', nameKey: 'common.male', emoji: '👨' },
+    { id: 'female', nameKey: 'common.female', emoji: '👩' },
   ];
 
   const allergyOptions = [
-    { id: 'yes', name: 'Yes', emoji: '👍' },
-    { id: 'no', name: 'No', emoji: '👎' },
+    { id: 'yes', nameKey: 'common.yes', emoji: '👍' },
+    { id: 'no', nameKey: 'common.no', emoji: '👎' },
   ];
 
   const goalOptions = [
     {
       id: 'healthy',
-      name: 'Eat healthy',
-      desc: 'Here to make it easier to eat healthier',
+      nameKey: 'preferences.eatHealthy',
+      descKey: 'preferences.eatHealthyDesc',
       emoji: '😊',
     },
     {
       id: 'lose',
-      name: 'Lose Weight',
-      desc: 'Safe and healthy rate of weight & fat loss',
+      nameKey: 'preferences.loseWeight',
+      descKey: 'preferences.loseWeightDesc',
       emoji: '🏃',
     },
     {
       id: 'gain',
-      name: 'Gain Weight',
-      desc: 'Safe and healthy rate of weight gain',
+      nameKey: 'preferences.gainWeight',
+      descKey: 'preferences.gainWeightDesc',
       emoji: '💪',
     },
     {
       id: 'muscle',
-      name: 'Build Muscle',
-      desc: 'Gain strength while minimizing fat gain',
+      nameKey: 'preferences.buildMuscle',
+      descKey: 'preferences.buildMuscleDesc',
       emoji: '🏋️',
     },
     {
       id: 'maintain',
-      name: 'Maintain Weight',
-      desc: 'Stay in shape with the right calories',
+      nameKey: 'preferences.maintainWeight',
+      descKey: 'preferences.maintainWeightDesc',
       emoji: '🧘',
     },
   ];
@@ -85,35 +87,35 @@ const Preferences = ({ navigation, onComplete }) => {
   const mealTypeOptions = [
     {
       id: 'balanced',
-      name: 'Balanced',
-      desc: 'Provides the nutrients your body needs to thrive',
+      nameKey: 'preferences.balanced',
+      descKey: 'preferences.balancedDesc',
       emoji: '⚖️',
       macros: [
-        { name: 'Protein', percentage: '20-35%', color: '#9C27B0' },
-        { name: 'Carbs', percentage: '40-55%', color: '#2196F3' },
-        { name: 'Fat', percentage: '20-30%', color: '#FF9800' },
+        { nameKey: 'preferences.protein', percentage: '20-35%', color: '#9C27B0' },
+        { nameKey: 'preferences.carbs', percentage: '40-55%', color: '#2196F3' },
+        { nameKey: 'preferences.fat', percentage: '20-30%', color: '#FF9800' },
       ],
     },
     {
       id: 'lowcarb',
-      name: 'Low-Carb',
-      desc: 'Low in carbs, but high in healthy fats, and non-starchy veggies',
+      nameKey: 'preferences.lowCarb',
+      descKey: 'preferences.lowCarbDesc',
       emoji: '🥑',
       macros: [
-        { name: 'Protein', percentage: '25-35%', color: '#9C27B0' },
-        { name: 'Carbs', percentage: '10-20%', color: '#2196F3' },
-        { name: 'Fat', percentage: '40-50%', color: '#FF9800' },
+        { nameKey: 'preferences.protein', percentage: '25-35%', color: '#9C27B0' },
+        { nameKey: 'preferences.carbs', percentage: '10-20%', color: '#2196F3' },
+        { nameKey: 'preferences.fat', percentage: '40-50%', color: '#FF9800' },
       ],
     },
     {
       id: 'highprotein',
-      name: 'High Protein',
-      desc: 'Boosts muscle strength and vitality with lean proteins',
+      nameKey: 'preferences.highProtein',
+      descKey: 'preferences.highProteinDesc',
       emoji: '🍗',
       macros: [
-        { name: 'Protein', percentage: '40-50%', color: '#9C27B0' },
-        { name: 'Carbs', percentage: '35-40%', color: '#2196F3' },
-        { name: 'Fat', percentage: '10-25%', color: '#FF9800' },
+        { nameKey: 'preferences.protein', percentage: '40-50%', color: '#9C27B0' },
+        { nameKey: 'preferences.carbs', percentage: '35-40%', color: '#2196F3' },
+        { nameKey: 'preferences.fat', percentage: '10-25%', color: '#FF9800' },
       ],
     },
   ];
@@ -165,13 +167,13 @@ const Preferences = ({ navigation, onComplete }) => {
             });
           }
         } else {
-          Alert.alert('Error', response.message || 'Failed to save preferences');
+          Alert.alert(t('common.error'), response.message || t('preferences.failedSavePreferences'));
         }
       } catch (error) {
         console.error('Save Preferences Error:', error);
         Alert.alert(
-          'Error',
-          error.message || 'Failed to save preferences. Please try again.'
+          t('common.error'),
+          error.message || t('preferences.failedSavePreferencesRetry')
         );
       } finally {
         setLoading(false);
@@ -207,8 +209,8 @@ const Preferences = ({ navigation, onComplete }) => {
       case 1:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Who are you subscribing for?</Text>
-            <Text style={styles.subtitle}>Let's tailor the experience to meet your needs</Text>
+            <Text style={styles.title}>{t('preferences.subscribingForTitle')}</Text>
+            <Text style={styles.subtitle}>{t('preferences.subscribingForSubtitle')}</Text>
 
             {subscribingOptions.map((option) => (
               <TouchableOpacity
@@ -220,8 +222,8 @@ const Preferences = ({ navigation, onComplete }) => {
                 onPress={() => handleSelect('subscribingFor', option.id)}
               >
                 <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>{option.title}</Text>
-                  <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
+                  <Text style={styles.optionTitle}>{t(option.titleKey)}</Text>
+                  <Text style={styles.optionSubtitle}>{t(option.subtitleKey)}</Text>
                 </View>
                 <Text style={styles.optionEmoji}>{option.emoji}</Text>
                 {preferences.subscribingFor === option.id && (
@@ -237,8 +239,8 @@ const Preferences = ({ navigation, onComplete }) => {
       case 2:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>What's your gender?</Text>
-            <Text style={styles.subtitle}>We will use this to calculate your daily calorie needs</Text>
+            <Text style={styles.title}>{t('preferences.genderTitle')}</Text>
+            <Text style={styles.subtitle}>{t('preferences.genderSubtitle')}</Text>
 
             {genderOptions.map((option) => (
               <TouchableOpacity
@@ -249,7 +251,7 @@ const Preferences = ({ navigation, onComplete }) => {
                 ]}
                 onPress={() => handleSelect('gender', option.id)}
               >
-                <Text style={styles.simpleCardText}>{option.name}</Text>
+                <Text style={styles.simpleCardText}>{t(option.nameKey)}</Text>
                 <Text style={styles.simpleCardEmoji}>{option.emoji}</Text>
               </TouchableOpacity>
             ))}
@@ -259,7 +261,7 @@ const Preferences = ({ navigation, onComplete }) => {
       case 3:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Do you have any food allergies?</Text>
+            <Text style={styles.title}>{t('preferences.allergiesTitle')}</Text>
 
             {allergyOptions.map((option) => (
               <TouchableOpacity
@@ -270,7 +272,7 @@ const Preferences = ({ navigation, onComplete }) => {
                 ]}
                 onPress={() => handleSelect('hasAllergies', option.id)}
               >
-                <Text style={styles.simpleCardText}>{option.name}</Text>
+                <Text style={styles.simpleCardText}>{t(option.nameKey)}</Text>
                 <Text style={styles.simpleCardEmoji}>{option.emoji}</Text>
               </TouchableOpacity>
             ))}
@@ -280,7 +282,7 @@ const Preferences = ({ navigation, onComplete }) => {
       case 4:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>What's your goal?</Text>
+            <Text style={styles.title}>{t('preferences.goalTitle')}</Text>
 
             {goalOptions.map((option) => (
               <TouchableOpacity
@@ -292,8 +294,8 @@ const Preferences = ({ navigation, onComplete }) => {
                 onPress={() => handleSelect('goal', option.id)}
               >
                 <View style={styles.goalContent}>
-                  <Text style={styles.goalTitle}>{option.name}</Text>
-                  <Text style={styles.goalDesc}>{option.desc}</Text>
+                  <Text style={styles.goalTitle}>{t(option.nameKey)}</Text>
+                  <Text style={styles.goalDesc}>{t(option.descKey)}</Text>
                 </View>
                 <Text style={styles.goalEmoji}>{option.emoji}</Text>
               </TouchableOpacity>
@@ -304,9 +306,9 @@ const Preferences = ({ navigation, onComplete }) => {
       case 5:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>What kind of meals do you prefer?</Text>
+            <Text style={styles.title}>{t('preferences.mealTypeTitle')}</Text>
             <Text style={styles.subtitle}>
-              You'll have access to the full menu but select one to personalise your experience
+              {t('preferences.mealTypeSubtitle')}
             </Text>
 
             {mealTypeOptions.map((option) => (
@@ -320,7 +322,7 @@ const Preferences = ({ navigation, onComplete }) => {
               >
                 <View style={styles.mealHeader}>
                   <View style={styles.mealTitleContainer}>
-                    <Text style={styles.mealTitle}>{option.name}</Text>
+                    <Text style={styles.mealTitle}>{t(option.nameKey)}</Text>
                     <Text style={styles.mealEmoji}>{option.emoji}</Text>
                   </View>
                   {preferences.mealType === option.id && (
@@ -329,13 +331,13 @@ const Preferences = ({ navigation, onComplete }) => {
                     </View>
                   )}
                 </View>
-                <Text style={styles.mealDesc}>{option.desc}</Text>
+                <Text style={styles.mealDesc}>{t(option.descKey)}</Text>
                 <View style={styles.macroContainer}>
                   {option.macros.map((macro, index) => (
                     <View key={index} style={styles.macroItem}>
                       <View style={[styles.macroBar, { backgroundColor: macro.color }]} />
                       <Text style={styles.macroPercentage}>{macro.percentage}</Text>
-                      <Text style={styles.macroName}>{macro.name}</Text>
+                      <Text style={styles.macroName}>{t(macro.nameKey)}</Text>
                     </View>
                   ))}
                 </View>
@@ -385,7 +387,7 @@ const Preferences = ({ navigation, onComplete }) => {
               <ActivityIndicator color={Colors.white} />
             ) : (
               <Text style={[styles.buttonText, !canProceed() && styles.buttonTextDisabled]}>
-                {currentStep === 5 ? 'Complete' : 'Continue'}
+                {currentStep === 5 ? t('preferences.complete') : t('common.continue')}
               </Text>
             )}
           </LinearGradient>

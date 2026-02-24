@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useLanguage } from '../../context/LanguageContext';
 import OnboardingScreen from '../Onboarding/OnboardingScreen';
 import AuthStack from './AuthStack';
 import BottomTabNavigator from './BottomTabNavigator';
@@ -20,10 +21,12 @@ import ChangePassword from '../User/ChangePassword';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
+  const { t } = useLanguage();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        headerBackTitle: t('common.back'),
       }}
       initialRouteName="Onboarding"
     >
@@ -35,8 +38,7 @@ const AppNavigator = () => {
         component={SubscriptionPackagesScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Choose Your Plan',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.chooseYourPlan'),
         }}
       />
       <Stack.Screen
@@ -44,8 +46,7 @@ const AppNavigator = () => {
         component={ManageSubscriptionScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Manage Subscription',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.manageSubscription'),
         }}
       />
       <Stack.Screen
@@ -53,8 +54,7 @@ const AppNavigator = () => {
         component={MealSelectionScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Select Meals',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.selectMeals'),
         }}
       />
       <Stack.Screen
@@ -62,8 +62,7 @@ const AppNavigator = () => {
         component={DeliveryPreferencesScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Delivery Preferences',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.deliveryPreferences'),
         }}
       />
       <Stack.Screen
@@ -71,8 +70,7 @@ const AppNavigator = () => {
         component={CheckoutScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Checkout',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.checkout'),
         }}
       />
       <Stack.Screen
@@ -80,8 +78,7 @@ const AppNavigator = () => {
         component={AddressSelectionScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Delivery Address',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.deliveryAddress'),
         }}
       />
       <Stack.Screen
@@ -89,8 +86,7 @@ const AppNavigator = () => {
         component={PaymentMethodScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Payment Method',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.paymentMethod'),
         }}
       />
       <Stack.Screen
@@ -98,8 +94,7 @@ const AppNavigator = () => {
         component={VisaPaymentScreen}
         options={{
           headerShown: true,
-          headerTitle: 'Pay with Card',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.payWithCard'),
         }}
       />
       <Stack.Screen
@@ -114,8 +109,7 @@ const AppNavigator = () => {
         component={AddressManagementScreen}
         options={{
           headerShown: true,
-          headerTitle: 'My Addresses',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.myAddresses'),
         }}
       />
       <Stack.Screen
@@ -123,8 +117,7 @@ const AppNavigator = () => {
         component={AddEditAddressScreen}
         options={({ route }) => ({
           headerShown: true,
-          headerTitle: route.params?.address ? 'Edit Address' : 'Add Address',
-          headerBackTitle: 'Back',
+          headerTitle: route.params?.address ? t('nav.editAddress') : t('nav.addAddress'),
         })}
       />
       <Stack.Screen
@@ -132,8 +125,7 @@ const AppNavigator = () => {
         component={EditProfile}
         options={{
           headerShown: true,
-          headerTitle: 'Edit Profile',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.editProfile'),
         }}
       />
       <Stack.Screen
@@ -141,8 +133,7 @@ const AppNavigator = () => {
         component={ChangePassword}
         options={{
           headerShown: true,
-          headerTitle: 'Change Password',
-          headerBackTitle: 'Back',
+          headerTitle: t('nav.changePassword'),
         }}
       />
     </Stack.Navigator>

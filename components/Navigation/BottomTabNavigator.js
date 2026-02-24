@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, StyleSheet } from 'react-native';
 import { Colors, Fonts } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Import screens
 import HomeScreen from '../Home/HomeScreen';
@@ -12,6 +13,7 @@ import ProfileScreen from '../User/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
+  const { t } = useLanguage();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -35,6 +37,7 @@ const BottomTabNavigator = () => {
         name="Home"
         component={HomeScreen}
         options={{
+          tabBarLabel: t('nav.home'),
           tabBarIcon: ({ focused }) => (
             <Text style={styles.tabIcon}>{focused ? '🏠' : '🏠'}</Text>
           ),
@@ -44,6 +47,7 @@ const BottomTabNavigator = () => {
         name="Subscriptions"
         component={SubscriptionsScreen}
         options={{
+          tabBarLabel: t('nav.subscriptions'),
           tabBarIcon: ({ focused }) => (
             <Text style={styles.tabIcon}>{focused ? '📋' : '📋'}</Text>
           ),
@@ -53,6 +57,7 @@ const BottomTabNavigator = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
+          tabBarLabel: t('nav.profile'),
           tabBarIcon: ({ focused }) => (
             <Text style={styles.tabIcon}>{focused ? '👤' : '👤'}</Text>
           ),

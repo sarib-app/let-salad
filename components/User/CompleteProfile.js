@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 import { updateProfile, getCurrentUser } from '../../utils/api';
 
 const CompleteProfile = ({ navigation, onComplete }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -93,13 +95,13 @@ const CompleteProfile = ({ navigation, onComplete }) => {
             navigation.navigate('Preferences');
           }
         } else {
-          Alert.alert('Error', response.message || 'Failed to save profile');
+          Alert.alert(t('common.error'), response.message || t('profile.failedSaveProfile'));
         }
       } catch (error) {
         console.error('Profile Update Error:', error);
         Alert.alert(
-          'Error',
-          error.message || 'Failed to save profile. Please try again.'
+          t('common.error'),
+          error.message || t('profile.failedSaveProfileRetry')
         );
       } finally {
         setLoading(false);
@@ -125,17 +127,17 @@ const CompleteProfile = ({ navigation, onComplete }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Complete Your Profile</Text>
+          <Text style={styles.title}>{t('profile.completeTitle')}</Text>
           <Text style={styles.subtitle}>
-            Help us personalize your meal experience
+            {t('profile.completeSubtitle')}
           </Text>
 
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>{t('profile.fullName')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your full name"
+                placeholder={t('profile.enterFullName')}
                 placeholderTextColor={Colors.textLight}
                 value={formData.name}
                 onChangeText={(value) => handleInputChange('name', value)}
@@ -143,10 +145,10 @@ const CompleteProfile = ({ navigation, onComplete }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={styles.label}>{t('profile.emailAddress')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your.email@example.com"
+                placeholder={t('profile.emailPlaceholder')}
                 placeholderTextColor={Colors.textLight}
                 value={formData.email}
                 onChangeText={(value) => handleInputChange('email', value)}
@@ -156,7 +158,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Sex</Text>
+              <Text style={styles.label}>{t('profile.sex')}</Text>
               <View style={styles.genderContainer}>
                 <TouchableOpacity
                   style={[
@@ -171,7 +173,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
                       formData.sex === 'male' && styles.genderButtonTextActive,
                     ]}
                   >
-                    Male
+                    {t('common.male')}
                   </Text>
                 </TouchableOpacity>
 
@@ -188,7 +190,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
                       formData.sex === 'female' && styles.genderButtonTextActive,
                     ]}
                   >
-                    Female
+                    {t('common.female')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -196,7 +198,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
 
             <View style={styles.row}>
               <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Text style={styles.label}>Weight (kg)</Text>
+                <Text style={styles.label}>{t('profile.weightKg')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="70"
@@ -208,7 +210,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
               </View>
 
               <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Text style={styles.label}>Height (cm)</Text>
+                <Text style={styles.label}>{t('profile.heightCm')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="175"
@@ -221,7 +223,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Age</Text>
+              <Text style={styles.label}>{t('profile.age')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="25"
@@ -245,7 +247,7 @@ const CompleteProfile = ({ navigation, onComplete }) => {
               end={{ x: 1, y: 0 }}
             >
               <Text style={[styles.buttonText, !isFormValid() && styles.buttonTextDisabled]}>
-                Continue
+                {t('common.continue')}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

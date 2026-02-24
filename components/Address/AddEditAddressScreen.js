@@ -16,12 +16,10 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { createAddress, updateAddress } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
-const ADDRESS_TYPES = [
-  { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'work', label: 'Work', icon: '🏢' },
-  { id: 'other', label: 'Other', icon: '📍' },
-];
+const ADDRESS_TYPE_IDS = ['home', 'work', 'other'];
+const ADDRESS_TYPE_ICONS = { home: '🏠', work: '🏢', other: '📍' };
 
 // Default to Riyadh
 const DEFAULT_REGION = {
@@ -32,6 +30,7 @@ const DEFAULT_REGION = {
 };
 
 const AddEditAddressScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { address: existingAddress } = route.params || {};
   const isEditing = !!existingAddress;
 
@@ -194,11 +193,11 @@ const AddEditAddressScreen = ({ route, navigation }) => {
   const handleSave = async () => {
     // Validation
     if (!form.street_address.trim()) {
-      Alert.alert('Required', 'Please enter a street address.');
+      Alert.alert(t('address.required'), t('address.enterStreet'));
       return;
     }
     if (!form.city.trim()) {
-      Alert.alert('Required', 'Please enter a city.');
+      Alert.alert(t('address.required'), t('address.enterCity'));
       return;
     }
 
@@ -220,11 +219,11 @@ const AddEditAddressScreen = ({ route, navigation }) => {
       if (response.code === 201 || response.code === 200) {
         navigation.goBack();
       } else {
-        Alert.alert('Error', response.message || 'Failed to save address.');
+        Alert.alert(t('common.error'), response.message || t('address.failedSaveAddress'));
       }
     } catch (error) {
       console.error('Error saving address:', error);
-      Alert.alert('Error', error.message || 'Failed to save address. Please try again.');
+      Alert.alert(t('common.error'), error.message || t('address.failedSaveAddressRetry'));
     } finally {
       setSaving(false);
     }
@@ -266,7 +265,7 @@ const AddEditAddressScreen = ({ route, navigation }) => {
           <View style={styles.searchBar}>
             <TextInput
               style={styles.searchInput}
-              placeholder="Search location..."
+              placeholder={t('address.searchLocation')}
               placeholderTextColor={Colors.textLight}
               value={searchQuery}
               onChangeText={handleSearchQueryChange}
@@ -307,35 +306,35 @@ const AddEditAddressScreen = ({ route, navigation }) => {
         keyboardShouldPersistTaps="handled"
       >
         {/* Address Type */}
-        <Text style={styles.label}>Address Type</Text>
+        <Text style={styles.label}>{t('address.addressType')}</Text>
         <View style={styles.typeContainer}>
-          {ADDRESS_TYPES.map((type) => (
+          {ADDRESS_TYPE_IDS.map((typeId) => (
             <TouchableOpacity
-              key={type.id}
+              key={typeId}
               style={[
                 styles.typeButton,
-                form.type === type.id && styles.typeButtonActive,
+                form.type === typeId && styles.typeButtonActive,
               ]}
-              onPress={() => setForm({ ...form, type: type.id })}
+              onPress={() => setForm({ ...form, type: typeId })}
             >
-              <Text style={styles.typeIcon}>{type.icon}</Text>
+              <Text style={styles.typeIcon}>{ADDRESS_TYPE_ICONS[typeId]}</Text>
               <Text
                 style={[
                   styles.typeLabel,
-                  form.type === type.id && styles.typeLabelActive,
+                  form.type === typeId && styles.typeLabelActive,
                 ]}
               >
-                {type.label}
+                {t(`address.${typeId}`)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Street Address */}
-        <Text style={styles.label}>Street Address *</Text>
+        <Text style={styles.label}>{t('address.streetAddress')}</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter street address"
+          placeholder={t('address.enterStreetAddress')}
           placeholderTextColor={Colors.textLight}
           value={form.street_address}
           onChangeText={(text) => setForm({ ...form, street_address: text })}
@@ -344,7 +343,7 @@ const AddEditAddressScreen = ({ route, navigation }) => {
         {/* Building & Apartment in row */}
         <View style={styles.row}>
           <View style={styles.halfField}>
-            <Text style={styles.label}>Building No.</Text>
+            <Text style={styles.label}>{t('address.buildingNo')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. 42"
@@ -354,7 +353,7 @@ const AddEditAddressScreen = ({ route, navigation }) => {
             />
           </View>
           <View style={styles.halfField}>
-            <Text style={styles.label}>Apartment No.</Text>
+            <Text style={styles.label}>{t('address.apartmentNo')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. 3A"
@@ -368,20 +367,20 @@ const AddEditAddressScreen = ({ route, navigation }) => {
         {/* City & District in row */}
         <View style={styles.row}>
           <View style={styles.halfField}>
-            <Text style={styles.label}>City *</Text>
+            <Text style={styles.label}>{t('address.city')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="City"
+              placeholder={t('address.city')}
               placeholderTextColor={Colors.textLight}
               value={form.city}
               onChangeText={(text) => setForm({ ...form, city: text })}
             />
           </View>
           <View style={styles.halfField}>
-            <Text style={styles.label}>District</Text>
+            <Text style={styles.label}>{t('address.district')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="District"
+              placeholder={t('address.district')}
               placeholderTextColor={Colors.textLight}
               value={form.district}
               onChangeText={(text) => setForm({ ...form, district: text })}
@@ -390,7 +389,7 @@ const AddEditAddressScreen = ({ route, navigation }) => {
         </View>
 
         {/* Postal Code */}
-        <Text style={styles.label}>Postal Code</Text>
+        <Text style={styles.label}>{t('address.postalCode')}</Text>
         <TextInput
           style={styles.input}
           placeholder="e.g. 12345"
@@ -401,10 +400,10 @@ const AddEditAddressScreen = ({ route, navigation }) => {
         />
 
         {/* Delivery Notes */}
-        <Text style={styles.label}>Delivery Notes</Text>
+        <Text style={styles.label}>{t('address.deliveryNotes')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Any special instructions for delivery..."
+          placeholder={t('address.deliveryNotesPlaceholder')}
           placeholderTextColor={Colors.textLight}
           value={form.delivery_notes}
           onChangeText={(text) => setForm({ ...form, delivery_notes: text })}
@@ -425,7 +424,7 @@ const AddEditAddressScreen = ({ route, navigation }) => {
           >
             {form.is_primary && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          <Text style={styles.primaryLabel}>Set as primary address</Text>
+          <Text style={styles.primaryLabel}>{t('address.setAsPrimary')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
@@ -448,7 +447,7 @@ const AddEditAddressScreen = ({ route, navigation }) => {
               <ActivityIndicator color={Colors.white} />
             ) : (
               <Text style={styles.saveButtonText}>
-                {isEditing ? 'Update Address' : 'Save Address'}
+                {isEditing ? t('address.updateAddress') : t('address.saveAddress')}
               </Text>
             )}
           </LinearGradient>

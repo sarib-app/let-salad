@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 import { updateProfile, getCurrentUser } from '../../utils/api';
 
 const EditProfile = ({ navigation }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -84,17 +86,17 @@ const EditProfile = ({ navigation }) => {
         const response = await updateProfile(profileData);
 
         if (response.code === 200) {
-          Alert.alert('Success', 'Profile updated successfully', [
-            { text: 'OK', onPress: () => navigation.goBack() },
+          Alert.alert(t('common.success'), t('profile.profileUpdated'), [
+            { text: t('common.ok'), onPress: () => navigation.goBack() },
           ]);
         } else {
-          Alert.alert('Error', response.message || 'Failed to update profile');
+          Alert.alert(t('common.error'), response.message || t('profile.failedUpdateProfile'));
         }
       } catch (error) {
         console.error('Profile Update Error:', error);
         Alert.alert(
-          'Error',
-          error.message || 'Failed to update profile. Please try again.'
+          t('common.error'),
+          error.message || t('profile.failedUpdateProfileRetry')
         );
       } finally {
         setLoading(false);
@@ -122,10 +124,10 @@ const EditProfile = ({ navigation }) => {
         <View style={styles.content}>
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>{t('profile.fullName')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your full name"
+                placeholder={t('profile.enterFullName')}
                 placeholderTextColor={Colors.textLight}
                 value={formData.name}
                 onChangeText={(value) => handleInputChange('name', value)}
@@ -133,10 +135,10 @@ const EditProfile = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={styles.label}>{t('profile.emailAddress')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your.email@example.com"
+                placeholder={t('profile.emailPlaceholder')}
                 placeholderTextColor={Colors.textLight}
                 value={formData.email}
                 onChangeText={(value) => handleInputChange('email', value)}
@@ -146,7 +148,7 @@ const EditProfile = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Sex</Text>
+              <Text style={styles.label}>{t('profile.sex')}</Text>
               <View style={styles.genderContainer}>
                 <TouchableOpacity
                   style={[
@@ -161,7 +163,7 @@ const EditProfile = ({ navigation }) => {
                       formData.sex === 'male' && styles.genderButtonTextActive,
                     ]}
                   >
-                    Male
+                    {t('common.male')}
                   </Text>
                 </TouchableOpacity>
 
@@ -178,7 +180,7 @@ const EditProfile = ({ navigation }) => {
                       formData.sex === 'female' && styles.genderButtonTextActive,
                     ]}
                   >
-                    Female
+                    {t('common.female')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -186,7 +188,7 @@ const EditProfile = ({ navigation }) => {
 
             <View style={styles.row}>
               <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Text style={styles.label}>Weight (kg)</Text>
+                <Text style={styles.label}>{t('profile.weightKg')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="70"
@@ -198,7 +200,7 @@ const EditProfile = ({ navigation }) => {
               </View>
 
               <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Text style={styles.label}>Height (cm)</Text>
+                <Text style={styles.label}>{t('profile.heightCm')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="175"
@@ -211,7 +213,7 @@ const EditProfile = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Age</Text>
+              <Text style={styles.label}>{t('profile.age')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="25"
@@ -238,7 +240,7 @@ const EditProfile = ({ navigation }) => {
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={[styles.buttonText, !isFormValid() && styles.buttonTextDisabled]}>
-                  Save Changes
+                  {t('profile.saveChanges')}
                 </Text>
               )}
             </LinearGradient>

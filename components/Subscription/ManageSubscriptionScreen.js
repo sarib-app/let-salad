@@ -15,8 +15,10 @@ import {
   pauseSubscription as pauseSubscriptionAPI,
   resumeSubscription as resumeSubscriptionAPI,
 } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ManageSubscriptionScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { subscriptionId } = route.params;
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
-      Alert.alert('Error', 'Failed to load subscription details.');
+      Alert.alert(t('common.error'), t('manageSubscription.failedLoadDetails'));
     } finally {
       setLoading(false);
     }
@@ -49,8 +51,8 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
 
     if (remainingPauseDays <= 0) {
       Alert.alert(
-        'Pause Limit Reached',
-        `You have already used all ${maxPauseDays} pause days for this subscription.`
+        t('manageSubscription.pauseLimitReached'),
+        `${t('manageSubscription.pauseLimitMessage')} ${maxPauseDays} ${t('manageSubscription.pauseDaysForSub')}`
       );
       return;
     }
@@ -58,21 +60,21 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
     // Build pause options based on remaining days
     const pauseOptions = [
       {
-        text: 'Cancel',
+        text: t('common.cancel'),
         style: 'cancel',
       },
     ];
 
     for (let i = 1; i <= Math.min(remainingPauseDays, 5); i++) {
       pauseOptions.push({
-        text: `${i} ${i === 1 ? 'Day' : 'Days'}`,
+        text: `${i} ${i === 1 ? t('common.day') : t('common.days')}`,
         onPress: () => executePause(i),
       });
     }
 
     Alert.alert(
-      'Pause Subscription',
-      `You have ${remainingPauseDays} pause ${remainingPauseDays === 1 ? 'day' : 'days'} remaining`,
+      t('manageSubscription.pauseSubscription'),
+      `${t('manageSubscription.youHave')} ${remainingPauseDays} ${remainingPauseDays === 1 ? t('common.day') : t('common.days')} ${t('manageSubscription.pauseRemaining')}`,
       pauseOptions
     );
   };
@@ -95,16 +97,16 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
         setSubscription(response.subscription);
 
         Alert.alert(
-          'Subscription Paused',
-          response.message || `Your subscription has been paused for ${days} ${days === 1 ? 'day' : 'days'}.`,
-          [{ text: 'OK' }]
+          t('manageSubscription.subscriptionPaused'),
+          response.message || `${t('manageSubscription.subscriptionPausedFor')} ${days} ${days === 1 ? t('common.day') : t('common.days')}.`,
+          [{ text: t('common.ok') }]
         );
       } else {
-        Alert.alert('Error', response.message || 'Failed to pause subscription.');
+        Alert.alert(t('common.error'), response.message || t('manageSubscription.failedPause'));
       }
     } catch (error) {
       console.error('Error pausing subscription:', error);
-      Alert.alert('Error', error.message || 'Failed to pause subscription. Please try again.');
+      Alert.alert(t('common.error'), error.message || t('manageSubscription.failedPauseRetry'));
     } finally {
       setActionLoading(false);
     }
@@ -120,16 +122,16 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
         setSubscription(response.subscription);
 
         Alert.alert(
-          'Subscription Resumed',
-          response.message || 'Your subscription is now active again.',
-          [{ text: 'OK' }]
+          t('manageSubscription.subscriptionResumed'),
+          response.message || t('manageSubscription.subscriptionActive'),
+          [{ text: t('common.ok') }]
         );
       } else {
-        Alert.alert('Error', response.message || 'Failed to resume subscription.');
+        Alert.alert(t('common.error'), response.message || t('manageSubscription.failedResume'));
       }
     } catch (error) {
       console.error('Error resuming subscription:', error);
-      Alert.alert('Error', error.message || 'Failed to resume subscription. Please try again.');
+      Alert.alert(t('common.error'), error.message || t('manageSubscription.failedResumeRetry'));
     } finally {
       setActionLoading(false);
     }
@@ -174,7 +176,7 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading subscription...</Text>
+          <Text style={styles.loadingText}>{t('manageSubscription.loadingSubscription')}</Text>
         </View>
       </View>
     );
@@ -194,9 +196,9 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
           <View style={styles.pausedBanner}>
             <Text style={styles.pausedIcon}>⏸️</Text>
             <View style={styles.pausedContent}>
-              <Text style={styles.pausedTitle}>Subscription Paused</Text>
+              <Text style={styles.pausedTitle}>{t('manageSubscription.subscriptionPaused')}</Text>
               <Text style={styles.pausedText}>
-                Resumes in {pauseInfo.daysLeft} {pauseInfo.daysLeft === 1 ? 'day' : 'days'} on{' '}
+                {t('manageSubscription.resumesIn')} {pauseInfo.daysLeft} {pauseInfo.daysLeft === 1 ? t('common.day') : t('common.days')} {t('manageSubscription.on')}{' '}
                 {pauseInfo.endDate}
               </Text>
             </View>
@@ -205,48 +207,48 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
 
         {/* Subscription Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Subscription Details</Text>
+          <Text style={styles.sectionTitle}>{t('manageSubscription.subscriptionDetails')}</Text>
           <View style={styles.detailsCard}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Package</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.package')}</Text>
               <Text style={styles.detailValue}>
                 {subscription.subscription_package?.name || '-'}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Plan</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.plan')}</Text>
               <Text style={styles.detailValue}>
                 {subscription.subscription_type?.name || '-'}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Duration</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.duration')}</Text>
               <Text style={styles.detailValue}>
-                {subscription.subscription_type?.duration_days || 0} Days
+                {subscription.subscription_type?.duration_days || 0} {t('common.days')}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Days Remaining</Text>
-              <Text style={styles.detailValue}>{subscription.remaining_days || 0} Days</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.daysRemaining')}</Text>
+              <Text style={styles.detailValue}>{subscription.remaining_days || 0} {t('common.days')}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Meals Remaining</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.mealsRemaining')}</Text>
               <Text style={styles.detailValue}>{subscription.meals_remaining || 0}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Start Date</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.startDate')}</Text>
               <Text style={styles.detailValue}>{formatDate(subscription.start_date)}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>End Date</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.endDate')}</Text>
               <Text style={styles.detailValue}>{formatDate(subscription.end_date)}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Pause Days Used</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.pauseDaysUsed')}</Text>
               <Text style={styles.detailValue}>{subscription.total_days_paused || 0}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Status</Text>
+              <Text style={styles.detailLabel}>{t('manageSubscription.status')}</Text>
               <View
                 style={[
                   styles.statusBadge,
@@ -254,7 +256,7 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
                 ]}
               >
                 <Text style={styles.statusText}>
-                  {isPaused ? 'Paused' : 'Active'}
+                  {isPaused ? t('common.paused') : t('common.active')}
                 </Text>
               </View>
             </View>
@@ -264,12 +266,12 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
         {/* Delivery Info */}
         {subscription.delivery_address && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Delivery Info</Text>
+            <Text style={styles.sectionTitle}>{t('manageSubscription.deliveryInfo')}</Text>
             <View style={styles.preferencesCard}>
               <View style={styles.preferenceRow}>
                 <Text style={styles.preferenceIcon}>📍</Text>
                 <View style={styles.preferenceContent}>
-                  <Text style={styles.preferenceLabel}>Delivery Address</Text>
+                  <Text style={styles.preferenceLabel}>{t('manageSubscription.deliveryAddress')}</Text>
                   <Text style={styles.preferenceValue}>
                     {subscription.delivery_address.street_address}, {subscription.delivery_address.district}
                   </Text>
@@ -282,7 +284,7 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
                 <View style={styles.preferenceRow}>
                   <Text style={styles.preferenceIcon}>🗺️</Text>
                   <View style={styles.preferenceContent}>
-                    <Text style={styles.preferenceLabel}>Delivery Zone</Text>
+                    <Text style={styles.preferenceLabel}>{t('manageSubscription.deliveryZone')}</Text>
                     <Text style={styles.preferenceValue}>
                       {subscription.delivery_zone.name}
                     </Text>
@@ -292,9 +294,9 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
               <View style={styles.preferenceRow}>
                 <Text style={styles.preferenceIcon}>💳</Text>
                 <View style={styles.preferenceContent}>
-                  <Text style={styles.preferenceLabel}>Payment</Text>
+                  <Text style={styles.preferenceLabel}>{t('manageSubscription.payment')}</Text>
                   <Text style={styles.preferenceValue}>
-                    {subscription.total_amount} SAR ({subscription.payment_method}) - {subscription.payment_status}
+                    {subscription.total_amount} {t('common.sar')} ({subscription.payment_method}) - {subscription.payment_status}
                   </Text>
                 </View>
               </View>
@@ -304,27 +306,27 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
 
         {/* Meal Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Meal Planning</Text>
+          <Text style={styles.sectionTitle}>{t('manageSubscription.mealPlanning')}</Text>
           <TouchableOpacity style={styles.mealSelectionCard} onPress={handleSelectMeals}>
             <View style={styles.mealSelectionContent}>
               <Text style={styles.mealSelectionIcon}>🍽️</Text>
               <View style={styles.mealSelectionText}>
-                <Text style={styles.mealSelectionTitle}>Select Your Meals</Text>
+                <Text style={styles.mealSelectionTitle}>{t('manageSubscription.selectMeals')}</Text>
                 <Text style={styles.mealSelectionSubtitle}>
-                  Choose meals for the next 5 days
+                  {t('manageSubscription.selectMealsDesc')}
                 </Text>
               </View>
             </View>
             <Text style={styles.mealSelectionArrow}>›</Text>
           </TouchableOpacity>
           <Text style={styles.mealSelectionNote}>
-            💡 You can update meal selections up to 8:00 PM the day before delivery
+            💡 {t('manageSubscription.mealUpdateNote')}
           </Text>
         </View>
 
         {/* Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions</Text>
+          <Text style={styles.sectionTitle}>{t('manageSubscription.actions')}</Text>
 
           {!isPaused ? (
             <TouchableOpacity
@@ -334,9 +336,9 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
             >
               <Text style={styles.actionIcon}>⏸️</Text>
               <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Pause Subscription</Text>
+                <Text style={styles.actionTitle}>{t('manageSubscription.pauseSubscription')}</Text>
                 <Text style={styles.actionSubtitle}>
-                  {subscription.total_days_paused || 0} pause days used
+                  {subscription.total_days_paused || 0} {t('manageSubscription.pauseDaysUsedAction')}
                 </Text>
               </View>
               {actionLoading ? (
@@ -353,8 +355,8 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
             >
               <Text style={styles.actionIcon}>▶️</Text>
               <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Resume Subscription</Text>
-                <Text style={styles.actionSubtitle}>Resume deliveries now</Text>
+                <Text style={styles.actionTitle}>{t('manageSubscription.resumeSubscription')}</Text>
+                <Text style={styles.actionSubtitle}>{t('manageSubscription.resumeDesc')}</Text>
               </View>
               {actionLoading ? (
                 <ActivityIndicator size="small" color={Colors.primary} />

@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { useMenu } from '../../context/MenuContext';
+import { useLanguage } from '../../context/LanguageContext';
 import MenuItem from './MenuItem';
 
 // Category emoji icons mapping
@@ -24,6 +25,7 @@ const categoryIcons = {
 };
 
 const MenuScreen = ({ navigation }) => {
+  const { t } = useLanguage();
   const {
     menuItems,
     categories,
@@ -57,8 +59,8 @@ const MenuScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Menu</Text>
-        <Text style={styles.subtitle}>Choose your favorite meals</Text>
+        <Text style={styles.title}>{t('menu.title')}</Text>
+        <Text style={styles.subtitle}>{t('menu.subtitle')}</Text>
       </View>
 
       {/* Category Tabs */}
@@ -96,7 +98,7 @@ const MenuScreen = ({ navigation }) => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading menu...</Text>
+          <Text style={styles.loadingText}>{t('menu.loadingMenu')}</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
@@ -106,7 +108,7 @@ const MenuScreen = ({ navigation }) => {
             style={styles.retryButton}
             onPress={() => loadMenuItems(selectedCategory)}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -123,7 +125,7 @@ const MenuScreen = ({ navigation }) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyEmoji}>🍽️</Text>
-              <Text style={styles.emptyText}>No items available</Text>
+              <Text style={styles.emptyText}>{t('menu.noItems')}</Text>
             </View>
           }
         />
@@ -138,7 +140,7 @@ const MenuScreen = ({ navigation }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.subscribeButtonText}>Subscribe for 648 SAR</Text>
+            <Text style={styles.subscribeButtonText}>{t('menu.subscribe')} 648 {t('common.sar')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

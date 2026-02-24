@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 
 const PaymentMethodScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { currentMethod, onMethodSelect } = route.params;
 
   // Mock saved payment methods
@@ -95,11 +97,11 @@ const PaymentMethodScreen = ({ route, navigation }) => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Add New Card</Text>
+          <Text style={styles.title}>{t('paymentMethod.addNewCard')}</Text>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Card Number</Text>
+              <Text style={styles.label}>{t('paymentMethod.cardNumber')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="1234 5678 9012 3456"
@@ -113,7 +115,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Cardholder Name</Text>
+              <Text style={styles.label}>{t('paymentMethod.cardholderName')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="John Doe"
@@ -125,7 +127,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
 
             <View style={styles.rowInputs}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
-                <Text style={styles.label}>Expiry Date</Text>
+                <Text style={styles.label}>{t('paymentMethod.expiryDate')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="MM/YY"
@@ -137,7 +139,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
               </View>
 
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>CVV</Text>
+                <Text style={styles.label}>{t('paymentMethod.cvv')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="123"
@@ -153,7 +155,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
             <View style={styles.securityNote}>
               <Text style={styles.securityIcon}>🔒</Text>
               <Text style={styles.securityText}>
-                Your payment information is encrypted and secure
+                {t('paymentMethod.securePayment')}
               </Text>
             </View>
           </View>
@@ -166,7 +168,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
             style={styles.secondaryButton}
             onPress={() => setShowAddNew(false)}
           >
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
+            <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.primaryButton} onPress={handleAddNewCard}>
@@ -176,7 +178,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.primaryButtonText}>Add Card</Text>
+              <Text style={styles.primaryButtonText}>{t('paymentMethod.addCard')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -190,7 +192,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Select Payment Method</Text>
+        <Text style={styles.title}>{t('paymentMethod.selectPaymentMethod')}</Text>
 
         {savedMethods.map((method) => (
           <TouchableOpacity
@@ -218,17 +220,17 @@ const PaymentMethodScreen = ({ route, navigation }) => {
                     <View>
                       <Text style={styles.methodName}>
                         {method.type === 'applepay'
-                          ? 'Apple Pay'
+                          ? t('paymentMethod.applePay')
                           : `${method.cardType} •••• ${method.last4}`}
                       </Text>
                       {method.type === 'card' && (
-                        <Text style={styles.methodExpiry}>Expires {method.expiry}</Text>
+                        <Text style={styles.methodExpiry}>{t('paymentMethod.expires')} {method.expiry}</Text>
                       )}
                     </View>
                   </View>
                   {method.isDefault && (
                     <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultText}>Default</Text>
+                      <Text style={styles.defaultText}>{t('paymentMethod.default')}</Text>
                     </View>
                   )}
                 </View>
@@ -239,7 +241,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
 
         <TouchableOpacity style={styles.addNewButton} onPress={() => setShowAddNew(true)}>
           <Text style={styles.addNewIcon}>+</Text>
-          <Text style={styles.addNewText}>Add New Card</Text>
+          <Text style={styles.addNewText}>{t('paymentMethod.addNewCard')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
@@ -253,7 +255,7 @@ const PaymentMethodScreen = ({ route, navigation }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.confirmButtonText}>Confirm Payment Method</Text>
+            <Text style={styles.confirmButtonText}>{t('paymentMethod.confirmPaymentMethod')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

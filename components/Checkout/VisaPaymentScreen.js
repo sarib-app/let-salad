@@ -20,8 +20,10 @@ import {
 } from 'react-native-moyasar-sdk';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { purchaseSubscription } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const VisaPaymentScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const {
     amount,
     description,
@@ -53,7 +55,7 @@ const VisaPaymentScreen = ({ route, navigation }) => {
           break;
         case PaymentStatus.failed:
           console.log('FAILED:', paymentResult.source?.message);
-          Alert.alert('Payment Failed', paymentResult.source?.message || 'Payment failed.');
+          Alert.alert(t('payment.paymentFailed'), paymentResult.source?.message || t('payment.paymentFailedMsg'));
           break;
         case PaymentStatus.initiated:
           console.log('3DS initiated, waiting...');
@@ -61,13 +63,13 @@ const VisaPaymentScreen = ({ route, navigation }) => {
           break;
         default:
           console.log('Status:', paymentResult.status);
-          Alert.alert('Payment Status', `Status: ${paymentResult.status}`);
+          Alert.alert(t('payment.paymentStatus'), `Status: ${paymentResult.status}`);
           break;
       }
     } else if (paymentResult instanceof TokenResponse) {
       console.log('Token:', paymentResult.token);
     } else {
-      let errorMessage = 'Something went wrong';
+      let errorMessage = t('payment.somethingWrong');
       if (paymentResult instanceof NetworkEndpointError) {
         errorMessage = `Network Error: ${paymentResult.message}`;
       } else if (paymentResult instanceof NetworkError) {
@@ -76,7 +78,7 @@ const VisaPaymentScreen = ({ route, navigation }) => {
         errorMessage = `Error: ${paymentResult.message}`;
       }
       console.error('Payment Error:', paymentResult);
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('common.error'), errorMessage);
     }
   }
 
@@ -99,11 +101,11 @@ const VisaPaymentScreen = ({ route, navigation }) => {
           paymentMethod: { type: 'visa_pay' },
         });
       } else {
-        Alert.alert('Error', response.message || 'Failed to place order. Please try again.');
+        Alert.alert(t('common.error'), response.message || t('payment.failedPlaceOrder'));
       }
     } catch (error) {
       console.error('Error placing order:', error);
-      Alert.alert('Error', error.message || 'Failed to place order. Please try again.');
+      Alert.alert(t('common.error'), error.message || t('payment.failedPlaceOrder'));
     } finally {
       setIsProcessing(false);
     }
@@ -114,13 +116,13 @@ const VisaPaymentScreen = ({ route, navigation }) => {
       {isProcessing && (
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.processingText}>Processing payment...</Text>
+          <Text style={styles.processingText}>{t('payment.processing')}</Text>
         </View>
       )}
 
       <View style={styles.header}>
-        <Text style={styles.title}>Pay with Card</Text>
-        <Text style={styles.subtitle}>Amount: {(amount / 100).toFixed(2)} SAR</Text>
+        <Text style={styles.title}>{t('payment.payWithCard')}</Text>
+        <Text style={styles.subtitle}>{t('payment.amount')} {(amount / 100).toFixed(2)} {t('common.sar')}</Text>
       </View>
 
       <View style={styles.cardContainer}>

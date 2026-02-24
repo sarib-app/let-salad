@@ -12,8 +12,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { getUserSubscriptions } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const SubscriptionsScreen = ({ navigation }) => {
+  const { t } = useLanguage();
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +36,7 @@ const SubscriptionsScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading subscriptions:', error);
-      Alert.alert('Error', 'Failed to load subscriptions. Please try again.');
+      Alert.alert(t('common.error'), t('subscription.failedLoadSubscriptions'));
     } finally {
       setLoading(false);
     }
@@ -57,13 +59,13 @@ const SubscriptionsScreen = ({ navigation }) => {
   const getStatusStyle = (status) => {
     switch (status) {
       case 'active':
-        return { bg: Colors.primary, text: 'Active' };
+        return { bg: Colors.primary, text: t('common.active') };
       case 'paused':
-        return { bg: '#FFB020', text: 'Paused' };
+        return { bg: '#FFB020', text: t('common.paused') };
       case 'expired':
-        return { bg: '#9E9E9E', text: 'Expired' };
+        return { bg: '#9E9E9E', text: t('common.expired') };
       case 'cancelled':
-        return { bg: '#E53935', text: 'Cancelled' };
+        return { bg: '#E53935', text: t('common.cancelled') };
       default:
         return { bg: Colors.textSecondary, text: status };
     }
@@ -74,12 +76,12 @@ const SubscriptionsScreen = ({ navigation }) => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Subscriptions</Text>
+          <Text style={styles.title}>{t('subscription.mySubscriptions')}</Text>
         </View>
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={[styles.emptySubtitle, { marginTop: Spacing.md }]}>
-            Loading your subscriptions...
+            {t('subscription.loadingSubscriptions')}
           </Text>
         </View>
       </View>
@@ -91,15 +93,15 @@ const SubscriptionsScreen = ({ navigation }) => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Subscriptions</Text>
+          <Text style={styles.title}>{t('subscription.mySubscriptions')}</Text>
         </View>
 
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyTitle}>No Active Subscriptions</Text>
+          <Text style={styles.emptyTitle}>{t('subscription.noSubscriptions')}</Text>
           <Text style={styles.emptySubtitle}>
-            You don't have any active subscriptions yet.{'\n'}
-            Choose a plan to get started!
+            {t('subscription.noSubscriptionsDesc')}{'\n'}
+            {t('subscription.chooseToStart')}
           </Text>
 
           <TouchableOpacity
@@ -112,7 +114,7 @@ const SubscriptionsScreen = ({ navigation }) => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.chooseButtonText}>Choose a Subscription</Text>
+              <Text style={styles.chooseButtonText}>{t('subscription.chooseSubscription')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -124,8 +126,8 @@ const SubscriptionsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Subscriptions</Text>
-        <Text style={styles.subtitle}>Manage your active meal plans</Text>
+        <Text style={styles.title}>{t('subscription.mySubscriptions')}</Text>
+        <Text style={styles.subtitle}>{t('subscription.manageSubtitle')}</Text>
       </View>
 
       <ScrollView
@@ -148,18 +150,18 @@ const SubscriptionsScreen = ({ navigation }) => {
 
               <View style={styles.cardDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Plan:</Text>
+                  <Text style={styles.detailLabel}>{t('subscription.plan')}</Text>
                   <Text style={styles.detailValue}>
-                    {subscription.subscription_type?.name} ({subscription.subscription_type?.duration_days} Days)
+                    {subscription.subscription_type?.name} ({subscription.subscription_type?.duration_days} {t('common.days')})
                   </Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Meals Remaining:</Text>
+                  <Text style={styles.detailLabel}>{t('subscription.mealsRemaining')}</Text>
                   <Text style={styles.detailValue}>{subscription.meals_remaining || 0}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Days Remaining:</Text>
-                  <Text style={styles.detailValue}>{subscription.remaining_days || 0} Days</Text>
+                  <Text style={styles.detailLabel}>{t('subscription.daysRemaining')}</Text>
+                  <Text style={styles.detailValue}>{subscription.remaining_days || 0} {t('common.days')}</Text>
                 </View>
               </View>
 
@@ -167,14 +169,14 @@ const SubscriptionsScreen = ({ navigation }) => {
                 style={styles.manageButton}
                 onPress={() => handleManageSubscription(subscription)}
               >
-                <Text style={styles.manageButtonText}>Manage Subscription</Text>
+                <Text style={styles.manageButtonText}>{t('subscription.manageSubscription')}</Text>
               </TouchableOpacity>
             </View>
           );
         })}
 
         <TouchableOpacity style={styles.addMoreButton} onPress={handleAddMore}>
-          <Text style={styles.addMoreText}>+ Add More Subscriptions</Text>
+          <Text style={styles.addMoreText}>{t('subscription.addMore')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

@@ -11,8 +11,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
 import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan, getMenu } from '../../utils/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const MealSelectionScreen = ({ route, navigation }) => {
+  const { t } = useLanguage();
   const { subscription, onMealsSelected } = route.params;
 
   console.log('=== Subscription Details ===', JSON.stringify(subscription, null, 2));
@@ -93,7 +95,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Error', 'Failed to load meal data. Please try again.');
+      Alert.alert(t('common.error'), t('mealSelection.failedLoadMeals'));
     } finally {
       setLoading(false);
     }
@@ -167,8 +169,8 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const handleSelectMeal = (meal) => {
     if (!canSelectForDate) {
       Alert.alert(
-        'Selection Closed',
-        'The selection window for this date has closed.'
+        t('mealSelection.selectionClosed'),
+        t('mealSelection.selectionClosedAlert')
       );
       return;
     }
@@ -184,8 +186,8 @@ const MealSelectionScreen = ({ route, navigation }) => {
     // Check if we can add more of this category
     if (currentCount >= (requirements[categoryType] || 0)) {
       Alert.alert(
-        'Limit Reached',
-        `You can only select ${requirements[categoryType]} ${meal.category} meal(s).`
+        t('mealSelection.limitReached'),
+        `${t('mealSelection.canOnlySelect')} ${requirements[categoryType]} ${meal.category} ${t('mealSelection.meals')}`
       );
       return;
     }
@@ -205,8 +207,8 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const handleRemoveMeal = (mealIndex) => {
     if (!canSelectForDate) {
       Alert.alert(
-        'Selection Closed',
-        'The selection window for this date has closed.'
+        t('mealSelection.selectionClosed'),
+        t('mealSelection.selectionClosedAlert')
       );
       return;
     }
@@ -241,16 +243,16 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const handleSubmitSelection = async () => {
     if (!isSelectionComplete()) {
       Alert.alert(
-        'Incomplete Selection',
-        'Please select all required meals before submitting.'
+        t('mealSelection.incompleteSelection'),
+        t('mealSelection.selectAllRequired')
       );
       return;
     }
 
     if (!canSelectForDate) {
       Alert.alert(
-        'Selection Closed',
-        'The selection window has closed for this date.'
+        t('mealSelection.selectionClosed'),
+        t('mealSelection.selectionClosedAlert')
       );
       return;
     }
@@ -262,15 +264,15 @@ const MealSelectionScreen = ({ route, navigation }) => {
     });
 
     Alert.alert(
-      'Confirm Meal Selection',
-      `Confirm meals for ${selectedDateFormatted}?`,
+      t('mealSelection.confirmSelection'),
+      `${t('mealSelection.confirmMealsFor')} ${selectedDateFormatted}?`,
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Confirm',
+          text: t('common.confirm'),
           onPress: async () => {
             setSubmitting(true);
 
@@ -287,9 +289,9 @@ const MealSelectionScreen = ({ route, navigation }) => {
               });
 
               if (response.code === 200) {
-                Alert.alert('Success', 'Your meals have been confirmed!', [
+                Alert.alert(t('common.success'), t('mealSelection.mealsConfirmed'), [
                   {
-                    text: 'OK',
+                    text: t('common.ok'),
                     onPress: () => {
                       if (onMealsSelected) onMealsSelected();
                       navigation.goBack();
@@ -297,11 +299,11 @@ const MealSelectionScreen = ({ route, navigation }) => {
                   },
                 ]);
               } else {
-                Alert.alert('Error', response.message || 'Failed to save meal selection.');
+                Alert.alert(t('common.error'), response.message || t('mealSelection.failedSaveMeals'));
               }
             } catch (error) {
               console.error('Error saving meal plan:', error);
-              Alert.alert('Error', error.message || 'Failed to save meal selection. Please try again.');
+              Alert.alert(t('common.error'), error.message || t('mealSelection.failedSaveMealsRetry'));
             } finally {
               setSubmitting(false);
             }
@@ -314,15 +316,15 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'delivered':
-        return { text: 'Delivered', color: Colors.primary, icon: '✓' };
+        return { text: t('mealSelection.delivered'), color: Colors.primary, icon: '✓' };
       case 'in_preparation':
-        return { text: 'Preparing', color: '#FFB020', icon: '👨‍🍳' };
+        return { text: t('mealSelection.preparing'), color: '#FFB020', icon: '👨‍🍳' };
       case 'out_for_delivery':
-        return { text: 'On the Way', color: '#00B4D8', icon: '🚗' };
+        return { text: t('mealSelection.onTheWay'), color: '#00B4D8', icon: '🚗' };
       case 'pending':
-        return { text: 'Pending', color: '#9E9E9E', icon: '📅' };
+        return { text: t('mealSelection.pending'), color: '#9E9E9E', icon: '📅' };
       case 'scheduled':
-        return { text: 'Scheduled', color: Colors.textSecondary, icon: '📅' };
+        return { text: t('mealSelection.scheduled'), color: Colors.textSecondary, icon: '📅' };
       default:
         return { text: status || 'Unknown', color: Colors.textSecondary, icon: '' };
     }
@@ -337,7 +339,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading meals...</Text>
+        <Text style={styles.loadingText}>{t('mealSelection.loadingMeals')}</Text>
       </View>
     );
   }
@@ -354,16 +356,16 @@ const MealSelectionScreen = ({ route, navigation }) => {
           <View style={styles.infoContent}>
             {canSelectForDate ? (
               <>
-                <Text style={styles.infoTitle}>Selection Window Open</Text>
+                <Text style={styles.infoTitle}>{t('mealSelection.selectionOpen')}</Text>
                 <Text style={styles.infoText}>
-                  {timeUntil.hours}h {timeUntil.minutes}m until deadline
+                  {timeUntil.hours}{t('mealSelection.h')} {timeUntil.minutes}{t('mealSelection.m')} {t('mealSelection.untilDeadline')}
                 </Text>
               </>
             ) : (
               <>
-                <Text style={styles.infoTitle}>Selection Window Closed</Text>
+                <Text style={styles.infoTitle}>{t('mealSelection.selectionClosed')}</Text>
                 <Text style={styles.infoText}>
-                  Come back before 8:00 PM to select meals for the next day
+                  {t('mealSelection.selectionClosedDesc')}
                 </Text>
               </>
             )}
@@ -383,13 +385,13 @@ const MealSelectionScreen = ({ route, navigation }) => {
 
             <View style={styles.selectedMealsCard}>
               <Text style={styles.selectedMealsTitle}>
-                Selected Meals ({selectedMeals.length}/{totalRequired})
+                {t('mealSelection.selectedMeals')} ({selectedMeals.length}/{totalRequired})
               </Text>
 
               {selectedMeals.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyStateText}>
-                    {canSelectForDate ? 'No meals selected yet' : 'No meals selected'}
+                    {canSelectForDate ? t('mealSelection.noMealsSelected') : t('mealSelection.noMealsSelectedShort')}
                   </Text>
                 </View>
               ) : (
@@ -410,7 +412,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
 
               {isComplete && (
                 <View style={styles.completeBanner}>
-                  <Text style={styles.completeText}>✓ All meals selected</Text>
+                  <Text style={styles.completeText}>✓ {t('mealSelection.allMealsSelected')}</Text>
                 </View>
               )}
             </View>
@@ -454,7 +456,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
                           <Text style={[styles.mealName, isSelected && styles.mealNameSelected]}>
                             {meal.name}
                           </Text>
-                          <Text style={styles.mealCalories}>{meal.calories} cal</Text>
+                          <Text style={styles.mealCalories}>{meal.calories} {t('common.cal')}</Text>
                           {isSelected && (
                             <View style={styles.selectedBadge}>
                               <Text style={styles.selectedBadgeText}>✓</Text>
@@ -495,7 +497,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
                           <Text style={[styles.mealName, isSelected && styles.mealNameSelected]}>
                             {meal.name}
                           </Text>
-                          <Text style={styles.mealCalories}>{meal.calories} cal</Text>
+                          <Text style={styles.mealCalories}>{meal.calories} {t('common.cal')}</Text>
                           {isSelected && (
                             <View style={styles.selectedBadge}>
                               <Text style={styles.selectedBadgeText}>✓</Text>
@@ -513,11 +515,11 @@ const MealSelectionScreen = ({ route, navigation }) => {
 
         {/* Meal Plans / History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Meals</Text>
+          <Text style={styles.sectionTitle}>{t('mealSelection.upcomingMeals')}</Text>
 
           {mealPlans.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No meal plans yet</Text>
+              <Text style={styles.emptyStateText}>{t('mealSelection.noMealPlans')}</Text>
             </View>
           ) : (
             mealPlans.map((day, index) => {
@@ -552,10 +554,10 @@ const MealSelectionScreen = ({ route, navigation }) => {
                   </View>
 
                   {day.deliveryTime && (
-                    <Text style={styles.historyTime}>Delivered at {day.deliveryTime}</Text>
+                    <Text style={styles.historyTime}>{t('mealSelection.deliveredAt')} {day.deliveryTime}</Text>
                   )}
                   {day.estimatedTime && (
-                    <Text style={styles.historyTime}>Estimated delivery: {day.estimatedTime}</Text>
+                    <Text style={styles.historyTime}>{t('mealSelection.estimatedDelivery')} {day.estimatedTime}</Text>
                   )}
 
                   {hasMeals ? (
@@ -572,7 +574,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
                   ) : (
                     <View style={styles.noMealsState}>
                       <Text style={styles.noMealsText}>
-                        {day.can_select ? 'Tap to select meals' : 'No meals selected'}
+                        {day.can_select ? t('mealSelection.tapToSelect') : t('mealSelection.noMealsSelectedShort')}
                       </Text>
                     </View>
                   )}
@@ -580,7 +582,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
                   {day.can_select && !isCurrentSelection && (
                     <View style={styles.tapIndicator}>
                       <Text style={styles.tapIndicatorText}>
-                        {hasMeals ? 'Tap to modify' : 'Tap to select'}
+                        {hasMeals ? t('mealSelection.tapToModify') : t('mealSelection.tapToSelect')}
                       </Text>
                     </View>
                   )}
@@ -610,7 +612,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
               {submitting ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.submitText}>Confirm Meal Selection</Text>
+                <Text style={styles.submitText}>{t('mealSelection.confirmSelection')}</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>

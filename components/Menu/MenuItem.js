@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 const itemWidth = (width - Spacing.md * 4) / 2;
@@ -9,6 +10,7 @@ const itemWidth = (width - Spacing.md * 4) / 2;
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/200x120/E8F5E9/00B14F?text=Let%27Salad';
 
 const MenuItem = ({ item, onPress }) => {
+  const { t } = useLanguage();
   return (
     <TouchableOpacity
       style={styles.container}
@@ -25,7 +27,7 @@ const MenuItem = ({ item, onPress }) => {
         </Text>
         <View style={styles.calorieContainer}>
           <Text style={styles.calorieValue}>{item.calories}</Text>
-          <Text style={styles.calorieLabel}> cal</Text>
+          <Text style={styles.calorieLabel}> {t('common.cal')}</Text>
         </View>
       </View>
     </TouchableOpacity>

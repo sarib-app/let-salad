@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { t } from '../../utils/lang';
+import { useLanguage } from '../../context/LanguageContext';
 import { sendOTP } from '../../utils/api';
 
 const Login = ({ navigation }) => {
+  const { t, language, setLanguage } = useLanguage();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -40,13 +41,13 @@ const Login = ({ navigation }) => {
             phoneNumber: fullPhoneNumber,
           });
         } else {
-          Alert.alert('Error', response.message || 'Failed to send OTP');
+          Alert.alert(t('common.error'), response.message || t('auth.failedSendOtp'));
         }
       } catch (error) {
         console.error('Send OTP Error:', error);
         Alert.alert(
-          'Error',
-          error.message || 'Failed to send OTP. Please try again.'
+          t('common.error'),
+          error.message || t('auth.failedSendOtpRetry')
         );
       } finally {
         setLoading(false);
@@ -63,14 +64,25 @@ const Login = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.langSwitchRow}>
+          <TouchableOpacity
+            style={styles.langSwitchButton}
+            onPress={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+          >
+            <Text style={styles.langSwitchText}>
+              {language === 'en' ? 'العربية' : 'English'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.header}>
           <Text style={styles.logo}>Let'Salad</Text>
-          <Text style={styles.tagline}>Fresh meals, delivered daily</Text>
+          <Text style={styles.tagline}>{t('auth.freshMeals')}</Text>
         </View>
 
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Welcome to Let'Salad</Text>
-          <Text style={styles.subtitle}>Enter your phone number to continue</Text>
+          <Text style={styles.title}>{t('auth.welcome')}</Text>
+          <Text style={styles.subtitle}>{t('auth.enterPhoneSubtitle')}</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t('auth.phoneNumber')}</Text>
@@ -103,7 +115,7 @@ const Login = ({ navigation }) => {
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={[styles.buttonText, phoneNumber.length < 9 && styles.buttonTextDisabled]}>
-                  Continue
+                  {t('common.continue')}
                 </Text>
               )}
             </LinearGradient>
@@ -111,7 +123,7 @@ const Login = ({ navigation }) => {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('auth.or')}</Text>
+            <Text style={styles.dividerText}>{t('common.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -138,9 +150,26 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
+  langSwitchRow: {
+    alignItems: 'flex-end',
+    paddingTop: 50,
+    paddingHorizontal: Spacing.xl,
+  },
+  langSwitchButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  langSwitchText: {
+    ...Fonts.medium,
+    fontSize: 14,
+    color: Colors.primary,
+  },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
   logo: {
