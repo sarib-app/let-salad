@@ -319,6 +319,21 @@ const ManageSubscriptionScreen = ({ route, navigation }) => {
             </View>
             <Text style={styles.mealSelectionArrow}>›</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.calendarCard}
+            onPress={() => navigation.navigate('MealCalendar', { subscription })}
+          >
+            <View style={styles.mealSelectionContent}>
+              <Text style={styles.mealSelectionIcon}>📅</Text>
+              <View style={styles.mealSelectionText}>
+                <Text style={styles.mealSelectionTitle}>{t('calendar.title')}</Text>
+                <Text style={styles.mealSelectionSubtitle}>
+                  {t('calendar.weekOf')}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.calendarArrow}>›</Text>
+          </TouchableOpacity>
           <Text style={styles.mealSelectionNote}>
             💡 {t('manageSubscription.mealUpdateNote')}
           </Text>
@@ -540,6 +555,22 @@ const styles = StyleSheet.create({
     ...Fonts.bold,
     fontSize: 24,
     color: Colors.primary,
+  },
+  calendarCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  calendarArrow: {
+    ...Fonts.bold,
+    fontSize: 24,
+    color: Colors.textSecondary,
   },
   mealSelectionNote: {
     ...Fonts.regular,

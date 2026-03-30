@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan, getMenu } from '../../utils/api';
+import { getAvailableMeals, getSubscriptionMealPlans, saveMealPlan, getMenu, getMealDetails } from '../../utils/api';
 import { useLanguage } from '../../context/LanguageContext';
+import { transformBackendMeal, buildMealPayload } from '../../utils/mockMealData';
+import MealDetailSheet from './MealDetailSheet';
 
 const MealSelectionScreen = ({ route, navigation }) => {
   const { t } = useLanguage();
@@ -28,6 +30,9 @@ const MealSelectionScreen = ({ route, navigation }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [canSelectForDate, setCanSelectForDate] = useState(false);
   const [deadlineTime, setDeadlineTime] = useState(null);
+  const [detailSheetVisible, setDetailSheetVisible] = useState(false);
+  const [detailMeal, setDetailMeal] = useState(null);
+  const [editingMealIndex, setEditingMealIndex] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -46,6 +51,8 @@ const MealSelectionScreen = ({ route, navigation }) => {
 
       // Process available meals - group by category
       // First try from getAvailableMeals, fall back to getMenu
+      // NOTE: Don't enrich with mock options here — real options are fetched
+      // per-meal from GET /mobile/menu/{id} when user taps a meal
       let mealsToGroup = [];
 
       if (availableResponse.code === 200 && availableResponse.meals && availableResponse.meals.length > 0) {
@@ -166,7 +173,7 @@ const MealSelectionScreen = ({ route, navigation }) => {
     return selectedMeals.length > 0;
   };
 
-  const handleSelectMeal = (meal) => {
+  const handleSelectMeal = async (meal) => {
     if (!canSelectForDate) {
       Alert.alert(
         t('mealSelection.selectionClosed'),
@@ -183,6 +190,18 @@ const MealSelectionScreen = ({ route, navigation }) => {
       (m) => m.category.toLowerCase() === categoryType
     ).length;
 
+    // Check if already selected (allow re-opening to edit)
+    const existingIndex = selectedMeals.findIndex((m) => m.id === meal.id);
+    if (existingIndex >= 0) {
+      // Open detail sheet to edit existing selection
+      setEditingMealIndex(existingIndex);
+      // Fetch real options from backend for editing too
+      const detailMealData = await fetchMealWithRealOptions(meal);
+      setDetailMeal(detailMealData);
+      setDetailSheetVisible(true);
+      return;
+    }
+
     // Check if we can add more of this category
     if (currentCount >= (requirements[categoryType] || 0)) {
       Alert.alert(
@@ -192,16 +211,42 @@ const MealSelectionScreen = ({ route, navigation }) => {
       return;
     }
 
-    // Add meal to selections
-    setSelectedMeals([
-      ...selectedMeals,
-      {
-        id: meal.id,
-        name: meal.name,
-        category: meal.category,
-        calories: meal.calories,
-      },
-    ]);
+    // Fetch real options from backend, then open detail sheet
+    setEditingMealIndex(null);
+    const detailMealData = await fetchMealWithRealOptions(meal);
+    setDetailMeal(detailMealData);
+    setDetailSheetVisible(true);
+  };
+
+  // Fetch meal details from backend to get real numeric option IDs
+  // Only uses real backend data — no mock options
+  const fetchMealWithRealOptions = async (meal) => {
+    try {
+      const response = await getMealDetails(meal.id);
+      if (response.code === 200 && response.meal) {
+        // Backend meal has real options with numeric IDs — transform to UI format
+        return transformBackendMeal(response.meal);
+      }
+    } catch (e) {
+      console.log('Failed to fetch meal details:', e);
+    }
+    // Fallback: return meal with empty options (no mock data)
+    return { ...meal, options: [], variations: [], add_ons: [], special_instructions: true };
+  };
+
+  const handleDetailSheetAdd = (customizedMeal) => {
+    if (editingMealIndex !== null) {
+      // Update existing selection
+      const updated = [...selectedMeals];
+      updated[editingMealIndex] = customizedMeal;
+      setSelectedMeals(updated);
+    } else {
+      // Add new selection
+      setSelectedMeals([...selectedMeals, customizedMeal]);
+    }
+    setDetailSheetVisible(false);
+    setDetailMeal(null);
+    setEditingMealIndex(null);
   };
 
   const handleRemoveMeal = (mealIndex) => {
@@ -215,6 +260,23 @@ const MealSelectionScreen = ({ route, navigation }) => {
 
     const updatedMeals = selectedMeals.filter((_, index) => index !== mealIndex);
     setSelectedMeals(updatedMeals);
+  };
+
+  const handleEditMeal = async (mealIndex) => {
+    if (!canSelectForDate) return;
+    const meal = selectedMeals[mealIndex];
+    // Find the full meal data from availableMenus
+    let fullMeal = null;
+    Object.values(availableMenus).forEach((meals) => {
+      const found = meals.find((m) => m.id === meal.id);
+      if (found) fullMeal = found;
+    });
+    if (fullMeal) {
+      setEditingMealIndex(mealIndex);
+      const detailMealData = await fetchMealWithRealOptions(fullMeal);
+      setDetailMeal(detailMealData);
+      setDetailSheetVisible(true);
+    }
   };
 
   const handleSelectDate = (day) => {
@@ -278,10 +340,10 @@ const MealSelectionScreen = ({ route, navigation }) => {
 
             try {
               // Prepare meals payload for backend
-              const mealsPayload = selectedMeals.map((meal) => ({
-                meal_id: meal.id,
-                quantity: 1,
-              }));
+              // Uses buildMealPayload to convert UI selections → backend format
+              // Backend expects: { option_group_id, option_value_id } per selected option
+              const mealsPayload = selectedMeals.map((meal) => buildMealPayload(meal));
+              console.log('=== Meal Selection Payload ===', JSON.stringify(mealsPayload, null, 2));
 
               const response = await saveMealPlan(subscription.id, {
                 delivery_date: selectedDate,
@@ -396,17 +458,29 @@ const MealSelectionScreen = ({ route, navigation }) => {
                 </View>
               ) : (
                 selectedMeals.map((meal, index) => (
-                  <View key={index} style={styles.selectedMealCard}>
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.selectedMealCard}
+                    onPress={() => handleEditMeal(index)}
+                    disabled={!canSelectForDate}
+                  >
                     <View style={styles.selectedMealInfo}>
                       <Text style={styles.selectedMealName}>{meal.name}</Text>
-                      <Text style={styles.selectedMealCategory}>{meal.category}</Text>
+                      <Text style={styles.selectedMealCategory}>
+                        {meal.calories} {t('common.cal')} • {meal.category}
+                      </Text>
+                      {meal.customization_summary ? (
+                        <Text style={styles.selectedMealCustomization} numberOfLines={2}>
+                          {meal.customization_summary}
+                        </Text>
+                      ) : null}
                     </View>
                     {canSelectForDate && (
                       <TouchableOpacity onPress={() => handleRemoveMeal(index)}>
                         <Text style={styles.removeButton}>✕</Text>
                       </TouchableOpacity>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
 
@@ -618,6 +692,19 @@ const MealSelectionScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Meal Detail / Customization Sheet */}
+      <MealDetailSheet
+        visible={detailSheetVisible}
+        meal={detailMeal}
+        onClose={() => {
+          setDetailSheetVisible(false);
+          setDetailMeal(null);
+          setEditingMealIndex(null);
+        }}
+        onAdd={handleDetailSheetAdd}
+        existingSelection={editingMealIndex !== null ? selectedMeals[editingMealIndex] : null}
+      />
     </View>
   );
 };
@@ -732,6 +819,12 @@ const styles = StyleSheet.create({
     ...Fonts.regular,
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  selectedMealCustomization: {
+    ...Fonts.regular,
+    fontSize: 11,
+    color: Colors.primary,
+    marginTop: 2,
   },
   removeButton: {
     ...Fonts.bold,

@@ -39,6 +39,7 @@ const Login = ({ navigation }) => {
 
           navigation.navigate('OTPVerification', {
             phoneNumber: fullPhoneNumber,
+            devOtp: response.otp || null, // Auto-fill for testing
           });
         } else {
           Alert.alert(t('common.error'), response.message || t('auth.failedSendOtp'));

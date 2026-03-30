@@ -7,7 +7,9 @@ import { useLanguage } from '../../context/LanguageContext';
 // Import screens
 import HomeScreen from '../Home/HomeScreen';
 import SubscriptionsScreen from '../Subscription/SubscriptionsScreen';
+import DeliveriesScreen from '../Delivery/DeliveriesScreen';
 import ProfileScreen from '../User/ProfileScreen';
+import DashboardScreen from '../Home/DashboardScreen';
 // import TestPaymentScreen from './TestPaymentScreen';
 
 const Tab = createBottomTabNavigator();
@@ -50,6 +52,26 @@ const BottomTabNavigator = () => {
           tabBarLabel: t('nav.subscriptions'),
           tabBarIcon: ({ focused }) => (
             <Text style={styles.tabIcon}>{focused ? '📋' : '📋'}</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Deliveries"
+        component={DeliveriesScreen}
+        options={{
+          tabBarLabel: t('nav.deliveries'),
+          tabBarIcon: ({ focused }) => (
+            <Text style={styles.tabIcon}>{focused ? '🚚' : '🚚'}</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: t('nav.dashboard'),
+          tabBarIcon: ({ focused }) => (
+            <Text style={styles.tabIcon}>{focused ? '📊' : '📊'}</Text>
           ),
         }}
       />

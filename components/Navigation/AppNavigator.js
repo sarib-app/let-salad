@@ -17,6 +17,9 @@ import AddressManagementScreen from '../Address/AddressManagementScreen';
 import AddEditAddressScreen from '../Address/AddEditAddressScreen';
 import EditProfile from '../User/EditProfile';
 import ChangePassword from '../User/ChangePassword';
+import NotificationsScreen from '../Notifications/NotificationsScreen';
+import NutritionDashboardScreen from '../Nutrition/NutritionDashboardScreen';
+import MealCalendarScreen from '../Calendar/MealCalendarScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -134,6 +137,30 @@ const AppNavigator = () => {
         options={{
           headerShown: true,
           headerTitle: t('nav.changePassword'),
+        }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: true,
+          headerTitle: t('nav.notifications'),
+        }}
+      />
+      <Stack.Screen
+        name="NutritionDashboard"
+        component={NutritionDashboardScreen}
+        options={{
+          headerShown: true,
+          headerTitle: t('nav.nutrition'),
+        }}
+      />
+      <Stack.Screen
+        name="MealCalendar"
+        component={MealCalendarScreen}
+        options={{
+          headerShown: true,
+          headerTitle: t('nav.mealCalendar'),
         }}
       />
     </Stack.Navigator>

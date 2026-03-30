@@ -328,10 +328,15 @@ export const getMenu = async () => {
 };
 
 /**
- * Get meal details
+ * Get meal details (includes options with values and price modifiers)
  * @param {number} id - Meal ID
  * @returns {Promise<{code: number, meal: object}>}
- * Backend response: {code: 200, meal: {id, name, name_ar, slug, category, description, description_ar, image_url, calories, protein, carbs, fat, price}}
+ * Backend response: {code: 200, meal: {id, name, name_ar, slug, category, description, description_ar,
+ *   image_url, calories, protein, carbs, fat, price,
+ *   options: [{id, name, name_ar, type: "multiple_choice"|"single_choice", is_required,
+ *     values: [{id, name, name_ar, price_modifier}]
+ *   }]
+ * }}
  */
 export const getMealDetails = async (id) => {
   try {
@@ -499,9 +504,10 @@ export const getSubscriptionMealPlans = async (subscriptionId) => {
 
 /**
  * Create/Update meal plan
+ * POST /api/v1/mobile/subscriptions/{id}/mealPlans
  * @param {number} subscriptionId - Subscription ID
- * @param {object} data - {delivery_date, meals: [{meal_id, quantity}]}
- * @returns {Promise<object>}
+ * @param {object} data - {delivery_date, meals: [{meal_id, quantity, options: [{option_group_id, option_value_id}]}]}
+ * @returns {Promise<{code: number, message: string, meal_plan: object}>}
  */
 export const saveMealPlan = async (subscriptionId, data) => {
   try {
@@ -536,6 +542,28 @@ export const getMealPlanDetails = async (subscriptionId, planId) => {
 export const cancelMealPlan = async (subscriptionId, planId) => {
   try {
     const response = await api.delete(`/mobile/subscriptions/${subscriptionId}/mealPlans/${planId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// ==================== DELIVERIES ====================
+
+/**
+ * Get deliveries for a subscription
+ * GET /api/v1/mobile/subscriptions/{id}/deliveries
+ * @param {number} subscriptionId - Subscription ID
+ * @returns {Promise<{code: number, today: object|null, upcoming: Array, past: Array}>}
+ * Backend response: {code: 200, today: {id, date, day_name, day_name_ar, status, estimated_time,
+ *   delivered_time, subscription_id, subscription_name, subscription_name_ar,
+ *   meals: [{name, name_ar}], meals_selected} | null,
+ *   upcoming: [...], past: [...]}
+ * Status values: "in_preparation", "on_the_way", "delivered", "pending"
+ */
+export const getDeliveries = async (subscriptionId) => {
+  try {
+    const response = await api.get(`/mobile/subscriptions/${subscriptionId}/deliveries`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;

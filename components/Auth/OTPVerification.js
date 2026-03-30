@@ -17,12 +17,20 @@ import { verifyOTP, sendOTP } from '../../utils/api';
 
 const OTPVerification = ({ navigation, route }) => {
   const { t } = useLanguage();
-  const { phoneNumber } = route.params;
+  const { phoneNumber, devOtp } = route.params;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef([]);
+
+  // Auto-fill OTP from backend response (for testing — remove when SMS service is connected)
+  useEffect(() => {
+    if (devOtp && typeof devOtp === 'string' && devOtp.length === 6) {
+      const digits = devOtp.split('');
+      setOtp(digits);
+    }
+  }, [devOtp]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -100,13 +108,15 @@ const OTPVerification = ({ navigation, route }) => {
         if (response.code === 200) {
           setTimer(60);
           setCanResend(false);
-          setOtp(['', '', '', '', '', '']);
 
-          // Log OTP for testing
-          if (response.otp) {
+          // Auto-fill new OTP for testing
+          if (response.otp && response.otp.length === 6) {
             console.log('==========================================');
             console.log('🔐 NEW OTP CODE:', response.otp);
             console.log('==========================================');
+            setOtp(response.otp.split(''));
+          } else {
+            setOtp(['', '', '', '', '', '']);
           }
 
           Alert.alert(t('common.success'), t('otp.otpResent'));
