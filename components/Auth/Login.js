@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
@@ -77,7 +78,11 @@ const Login = ({ navigation }) => {
         </View>
 
         <View style={styles.header}>
-          <Text style={styles.logo}>Let'Salad</Text>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.tagline}>{t('auth.freshMeals')}</Text>
         </View>
 
@@ -122,20 +127,16 @@ const Login = ({ navigation }) => {
             </LinearGradient>
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('common.or')}</Text>
-            <View style={styles.dividerLine} />
-          </View>
+        </View>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>G</Text>
-            <Text style={styles.socialButtonText}>{t('auth.continueWithGoogle')}</Text>
+        <View style={styles.legalContainer}>
+          <Text style={styles.legalText}>{t('auth.byContinuing')} </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('TermsAndConditions')}>
+            <Text style={styles.legalLink}>{t('profileScreen.termsConditions')}</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}></Text>
-            <Text style={styles.socialButtonText}>{t('auth.continueWithApple')}</Text>
+          <Text style={styles.legalText}> {t('common.and')} </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+            <Text style={styles.legalLink}>{t('profileScreen.privacyPolicy')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -173,10 +174,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
-  logo: {
-    ...Fonts.bold,
-    fontSize: 36,
-    color: Colors.primary,
+  logoImage: {
+    width: 160,
+    height: 80,
     marginBottom: Spacing.sm,
   },
   tagline: {
@@ -257,42 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.white,
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    ...Fonts.regular,
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginHorizontal: Spacing.md,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 56,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-  },
-  socialIcon: {
-    ...Fonts.bold,
-    fontSize: 20,
-    marginRight: Spacing.sm,
-  },
-  socialButtonText: {
-    ...Fonts.medium,
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -315,6 +279,25 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: Colors.textLight,
+  },
+  legalContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xl,
+  },
+  legalText: {
+    ...Fonts.regular,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  legalLink: {
+    ...Fonts.semiBold,
+    fontSize: 12,
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
 });
 

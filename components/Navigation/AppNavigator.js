@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useLanguage } from '../../context/LanguageContext';
+import { Colors } from '../../utils/globalStyles';
 import OnboardingScreen from '../Onboarding/OnboardingScreen';
 import AuthStack from './AuthStack';
 import BottomTabNavigator from './BottomTabNavigator';
@@ -20,18 +23,38 @@ import ChangePassword from '../User/ChangePassword';
 import NotificationsScreen from '../Notifications/NotificationsScreen';
 import NutritionDashboardScreen from '../Nutrition/NutritionDashboardScreen';
 import MealCalendarScreen from '../Calendar/MealCalendarScreen';
+import TermsAndConditionsScreen from '../Legal/TermsAndConditionsScreen';
+import PrivacyPolicyScreen from '../Legal/PrivacyPolicyScreen';
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Onboarding');
+
+  useEffect(() => {
+    AsyncStorage.getItem('@auth_token').then(token => {
+      setInitialRoute(token ? 'MainApp' : 'Onboarding');
+      setIsLoading(false);
+    });
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
         headerBackTitle: t('common.back'),
       }}
-      initialRouteName="Onboarding"
+      initialRouteName={initialRoute}
     >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Auth" component={AuthStack} />
@@ -161,6 +184,22 @@ const AppNavigator = () => {
         options={{
           headerShown: true,
           headerTitle: t('nav.mealCalendar'),
+        }}
+      />
+      <Stack.Screen
+        name="TermsAndConditions"
+        component={TermsAndConditionsScreen}
+        options={{
+          headerShown: true,
+          headerTitle: t('profileScreen.termsConditions'),
+        }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{
+          headerShown: true,
+          headerTitle: t('profileScreen.privacyPolicy'),
         }}
       />
     </Stack.Navigator>

@@ -28,6 +28,7 @@ const EditProfile = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(false);
   const [fetchingUser, setFetchingUser] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     fetchUserData();
@@ -56,6 +57,9 @@ const EditProfile = ({ navigation }) => {
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
+    if (fieldErrors[field]) {
+      setFieldErrors({ ...fieldErrors, [field]: null });
+    }
   };
 
   const isFormValid = () => {
@@ -72,6 +76,7 @@ const EditProfile = ({ navigation }) => {
   const handleSave = async () => {
     if (isFormValid()) {
       setLoading(true);
+      setFieldErrors({});
       try {
         const profileData = {
           name: formData.name,
@@ -89,15 +94,29 @@ const EditProfile = ({ navigation }) => {
           Alert.alert(t('common.success'), t('profile.profileUpdated'), [
             { text: t('common.ok'), onPress: () => navigation.goBack() },
           ]);
+        } else if (response.code === 422 && response.errors) {
+          const parsed = {};
+          Object.keys(response.errors).forEach(key => {
+            parsed[key] = response.errors[key][0];
+          });
+          setFieldErrors(parsed);
         } else {
           Alert.alert(t('common.error'), response.message || t('profile.failedUpdateProfile'));
         }
       } catch (error) {
         console.error('Profile Update Error:', error);
-        Alert.alert(
-          t('common.error'),
-          error.message || t('profile.failedUpdateProfileRetry')
-        );
+        if (error.errors) {
+          const parsed = {};
+          Object.keys(error.errors).forEach(key => {
+            parsed[key] = error.errors[key][0];
+          });
+          setFieldErrors(parsed);
+        } else {
+          Alert.alert(
+            t('common.error'),
+            error.message || t('profile.failedUpdateProfileRetry')
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -137,7 +156,7 @@ const EditProfile = ({ navigation }) => {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>{t('profile.emailAddress')}</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, fieldErrors.email && styles.inputError]}
                 placeholder={t('profile.emailPlaceholder')}
                 placeholderTextColor={Colors.textLight}
                 value={formData.email}
@@ -145,6 +164,9 @@ const EditProfile = ({ navigation }) => {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
+              {fieldErrors.email && (
+                <Text style={styles.errorText}>{fieldErrors.email}</Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
@@ -296,6 +318,16 @@ const styles = StyleSheet.create({
     ...Fonts.regular,
     fontSize: 16,
     color: Colors.textPrimary,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#E53935',
+  },
+  errorText: {
+    color: '#E53935',
+    fontSize: 12,
+    marginTop: 4,
+    ...Fonts.regular,
   },
   genderContainer: {
     flexDirection: 'row',

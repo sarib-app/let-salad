@@ -3,6 +3,7 @@ export const translations = {
     // ==================== COMMON ====================
     common: {
       continue: 'Continue',
+      and: 'and',
       submit: 'Submit',
       cancel: 'Cancel',
       save: 'Save',
@@ -66,6 +67,7 @@ export const translations = {
       enterEmail: 'Enter your email',
       confirmPassword: 'Confirm Password',
       agreeTerms: 'I agree to Terms & Conditions',
+      byContinuing: 'By continuing, you agree to our',
       welcome: "Welcome to Let'Salad",
       enterPhoneSubtitle: 'Enter your phone number to continue',
       freshMeals: 'Fresh meals, delivered daily',
@@ -605,6 +607,7 @@ export const translations = {
     // ==================== COMMON ====================
     common: {
       continue: 'متابعة',
+      and: 'و',
       submit: 'إرسال',
       cancel: 'إلغاء',
       save: 'حفظ',
@@ -668,6 +671,7 @@ export const translations = {
       enterEmail: 'أدخل بريدك الإلكتروني',
       confirmPassword: 'تأكيد كلمة المرور',
       agreeTerms: 'أوافق على الشروط والأحكام',
+      byContinuing: 'بالمتابعة، أنت توافق على',
       welcome: 'مرحباً بك في لتسالد',
       enterPhoneSubtitle: 'أدخل رقم هاتفك للمتابعة',
       freshMeals: 'وجبات طازجة، توصيل يومي',

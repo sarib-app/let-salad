@@ -107,13 +107,13 @@ const ProfileScreen = () => {
         navigation.navigate('NutritionDashboard');
         break;
       case 5: // Help & Support
-        Linking.openURL('mailto:support@letsalad.com?subject=Help%20%26%20Support');
+        Linking.openURL('https://letsalad-support.netlify.app');
         break;
       case 6: // Terms and Conditions
-        Linking.openURL('https://calo.dwrylight.com/terms');
+        navigation.navigate('TermsAndConditions');
         break;
       case 7: // Privacy Policy
-        Linking.openURL('https://calo.dwrylight.com/privacy');
+        navigation.navigate('PrivacyPolicy');
         break;
       case 8: // Delete Account
         handleDeleteAccount();

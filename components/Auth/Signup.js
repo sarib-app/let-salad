@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
@@ -36,7 +37,11 @@ const Signup = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>Let'Salad</Text>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.tagline}>{t('auth.freshMeals')}</Text>
         </View>
 
@@ -107,15 +112,22 @@ const Signup = ({ navigation }) => {
             />
           </View>
 
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => setAgreeTerms(!agreeTerms)}
-          >
-            <View style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}>
-              {agreeTerms && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>{t('auth.agreeTerms')}</Text>
-          </TouchableOpacity>
+          <View style={styles.checkboxContainer}>
+            <TouchableOpacity onPress={() => setAgreeTerms(!agreeTerms)}>
+              <View style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}>
+                {agreeTerms && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.checkboxLabel}>
+              {t('auth.agreeTerms').split('Terms & Conditions')[0]}
+              <Text
+                style={styles.termsLink}
+                onPress={() => navigation.navigate('TermsAndConditions')}
+              >
+                {t('profileScreen.termsConditions')}
+              </Text>
+            </Text>
+          </View>
 
           <TouchableOpacity style={styles.button} onPress={handleSignup}>
             <LinearGradient
@@ -126,22 +138,6 @@ const Signup = ({ navigation }) => {
             >
               <Text style={styles.buttonText}>{t('auth.signup')}</Text>
             </LinearGradient>
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('common.or')}</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>G</Text>
-            <Text style={styles.socialButtonText}>{t('auth.continueWithGoogle')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}></Text>
-            <Text style={styles.socialButtonText}>{t('auth.continueWithApple')}</Text>
           </TouchableOpacity>
 
           <View style={styles.footer}>
@@ -169,10 +165,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: Spacing.lg,
   },
-  logo: {
-    ...Fonts.bold,
-    fontSize: 36,
-    color: Colors.primary,
+  logoImage: {
+    width: 160,
+    height: 80,
     marginBottom: Spacing.sm,
   },
   tagline: {
@@ -256,6 +251,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     flex: 1,
+  },
+  termsLink: {
+    ...Fonts.semiBold,
+    fontSize: 14,
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
   button: {
     width: '100%',

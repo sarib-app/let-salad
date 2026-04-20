@@ -14,7 +14,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.saribkhan.letsalad"
+      "bundleIdentifier": "com.saribkhan.letsalad",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.in-app-payments": ["merchant.com.saribkhan.letsalad"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +33,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "./plugins/apple-pay-config-plugin.js"
+    ],
     "extra": {
       "eas": {
         "projectId": "671a9312-0058-4e2b-9ef9-32b7bda5fa5a"

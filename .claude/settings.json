@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcode-select -p)",
+      "Read(//Applications/Xcode.app/**)",
+      "Bash(xcodebuild -workspace /Users/saribarshadkhan/Projects/Expo/let-salad/ios/letsalad.xcworkspace -list)",
+      "Bash(lsof -ti:8081)"
+    ]
+  }
+}

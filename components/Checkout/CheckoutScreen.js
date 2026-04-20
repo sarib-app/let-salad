@@ -9,8 +9,9 @@ import {
   Alert,
 } from 'react-native';
 import { Colors, Fonts, Spacing, BorderRadius } from '../../utils/globalStyles';
-import { validateAddressCoordinates } from '../../utils/api';
+import { validateAddressCoordinates, purchaseSubscription } from '../../utils/api';
 import { useLanguage } from '../../context/LanguageContext';
+import ApplePayBtn from '../ApplePayBtn';
 
 const CheckoutScreen = ({ route, navigation }) => {
   const { t } = useLanguage();
@@ -81,6 +82,40 @@ const CheckoutScreen = ({ route, navigation }) => {
         return `${qty} ${label}`;
       })
       .join(', ');
+  };
+
+  const [applePayProcessing, setApplePayProcessing] = useState(false);
+
+  const handleApplePaySuccess = async (payload) => {
+    setApplePayProcessing(true);
+    try {
+      const response = await purchaseSubscription({
+        subscription_type_id: subscriptionType?.id,
+        subscription_package_id: selectedPackage.id,
+        delivery_address_id: deliveryAddress.id,
+        payment_method: 'apple_pay',
+        payment_reference: payload.moyasarPaymentID,
+      });
+
+      if (response.code === 201 || response.code === 200) {
+        navigation.navigate('OrderConfirmation', {
+          subscription: response.subscription,
+          package: selectedPackage,
+          subscriptionType,
+          duration,
+          price,
+          address: deliveryAddress,
+          deliveryPreferences,
+          paymentMethod: { type: 'apple_pay' },
+        });
+      } else {
+        Alert.alert(t('common.error'), response.message || t('payment.failedPlaceOrder'));
+      }
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message || t('payment.failedPlaceOrder'));
+    } finally {
+      setApplePayProcessing(false);
+    }
   };
 
   const handleEditAddress = () => {
@@ -209,20 +244,6 @@ const CheckoutScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Payment Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.payNow')}</Text>
-
-          {/* Pay with Card Button */}
-          <TouchableOpacity
-            style={[styles.cardPayButton, !canPlaceOrder && styles.payButtonDisabled]}
-            onPress={handlePayWithCard}
-            disabled={!canPlaceOrder}
-          >
-            <Text style={styles.cardPayText}>{t('checkout.payWithCard')}</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Price Breakdown */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('checkout.priceDetails')}</Text>
@@ -251,6 +272,49 @@ const CheckoutScreen = ({ route, navigation }) => {
               <Text style={styles.totalValue}>{total} {t('common.sar')}</Text>
             </View>
           </View>
+        </View>
+
+        {/* Payment Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('checkout.payNow')}</Text>
+
+          {/* Pay with Card Button */}
+          <TouchableOpacity
+            style={[styles.cardPayButton, !canPlaceOrder && styles.payButtonDisabled]}
+            onPress={handlePayWithCard}
+            disabled={!canPlaceOrder}
+          >
+            <Text style={styles.cardPayText}>{t('checkout.payWithCard')}</Text>
+          </TouchableOpacity>
+
+          {/* Apple Pay Button */}
+          <ApplePayBtn
+            amount={amountInHalalas}
+            companyName="LetSalad"
+            moyasarPublicKey="pk_test_jJDGuVChg1ztPAozP4RFPswB6cKcTBLW9g2GHvRy"
+            merchantIdentifier="merchant.com.saribkhan.letsalad"
+            countryCode="SA"
+            currency="SAR"
+            isMadaSupported={true}
+            isAmexSupported={false}
+            isMasterCardSupported={true}
+            isVisaSupported={true}
+            isMerchant3DSEnabled={true}
+            description={`LetSalad - ${selectedPackage.name}`}
+            metaData={[
+              { key: 'package_id', value: selectedPackage.id?.toString() || '' },
+              { key: 'subscription_type_id', value: subscriptionType?.id?.toString() || '' },
+            ]}
+            summaryItems={[
+              { itemTitle: t('checkout.packagePrice'), itemAmount: Math.round(parseFloat(price) * 100) },
+              { itemTitle: t('checkout.deliveryFee'), itemAmount: Math.round(parseFloat(deliveryFee) * 100) },
+              { itemTitle: t('checkout.tax'), itemAmount: Math.round(parseFloat(tax) * 100) },
+            ]}
+            onSuccessfulPayment={handleApplePaySuccess}
+            onFailedPayment={(payload) => Alert.alert(t('payment.paymentFailed'), payload.errorDescription || t('payment.paymentFailedMsg'))}
+            style={[styles.applePayButton, !canPlaceOrder && styles.payButtonDisabled]}
+          />
+
         </View>
 
         <View style={{ height: 100 }} />
@@ -419,6 +483,12 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  applePayButton: {
+    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    height: 50,
+    overflow: 'hidden',
   },
   cardPayText: {
     ...Fonts.semiBold,
